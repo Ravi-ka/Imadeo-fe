@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated, logout, user } = useAuthStore();
+  const { isAuthenticated, logout, userdetails } = useAuthStore();
 
   const navLinks = [
     { name: 'Features', href: '#features' },
@@ -53,7 +53,7 @@ export function Navbar() {
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Hi, {user?.firstName || 'User'}
+                    Hi, {userdetails?.username || 'User'}
                   </span>
                   <Button variant="outline" size="sm" onClick={logout}>
                     Sign Out
@@ -111,7 +111,7 @@ export function Navbar() {
               {isAuthenticated ? (
                 <>
                   <span className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">
-                    Logged in as {user?.email}
+                    Logged in as {userdetails?.email}
                   </span>
                   <Button variant="outline" fullWidth onClick={logout}>
                     Sign Out

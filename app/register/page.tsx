@@ -11,11 +11,13 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Layers, Github, Chrome, AlertCircle, Check, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {api} from '../../services/api'
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
+  username: z.string().min(2, 'Username must be at least 2 characters'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
@@ -64,21 +66,21 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      // Simulate API registration delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser = {
-        id: 'usr_mock789',
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email
-      };
-      const mockToken = 'mock_jwt_token_register_987654';
-      
-      login(mockToken, mockUser);
+      const response = await api.post('/api/v1/auth/register', {
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        username: data.username,
+      });
+      console.log("Response", response);
+      if (response.status === 201) {
+        console.log("User registered successfully");
+        console.log(response.data);
+      }
       router.push('/');
     } catch (err: any) {
-      setError(err?.message || 'Registration failed. Please try again.');
+      setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -140,6 +142,14 @@ export default function RegisterPage() {
               placeholder="john@example.com"
               error={errors.email?.message}
               {...register('email')}
+            />
+
+            <Input
+              label="username"
+              type="text"
+              placeholder="Username"
+              error={errors.username?.message}
+              {...register('username')}
             />
 
             <div className="space-y-2">
@@ -274,7 +284,7 @@ export default function RegisterPage() {
           <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
             <Layers className="w-5 h-5" />
           </div>
-          <span className="text-xl font-bold text-white">Imadeo Pipeline</span>
+          <span className="text-xl font-bold text-white">Imadeo</span>
         </div>
 
         <div className="relative space-y-4 max-w-md">

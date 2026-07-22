@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Layers, Github, Chrome, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '@/services/api';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -32,18 +33,18 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      // Simulate API response delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await api.post('/api/v1/auth/login',{
+        email:data.email,
+        password:data.password,
+        remember_me:rememberMe,
+      });
+      console.log("Response",response)
+      if(response.status === 200){
+        console.log("User logged in successfully")
+        console.log(response.data);
+      }
       
-      const mockUser = {
-        id: 'usr_mock123',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: data.email
-      };
-      const mockToken = 'mock_jwt_token_abcdef123456';
-      
-      login(mockToken, mockUser);
+      login(response.data.token, response.data.userdetails);
       router.push('/');
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please try again.');
@@ -175,7 +176,7 @@ export default function LoginPage() {
           <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
             <Layers className="w-5 h-5" />
           </div>
-          <span className="text-xl font-bold text-white">Imadeo Pipeline</span>
+          <span className="text-xl font-bold text-white">Imadeo</span>
         </div>
 
         <div className="relative space-y-4 max-w-md">

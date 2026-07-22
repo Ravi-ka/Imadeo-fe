@@ -1,19 +1,21 @@
 import { create } from 'zustand';
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+interface UserDetails {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  email?: string;
+  [key: string]: any;
 }
 
 interface AuthState {
   token: string | null;
-  user: User | null;
+  userdetails: UserDetails | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (token: string, user: User) => void;
+  login: (token: string, userdetails: UserDetails) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -21,19 +23,19 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: typeof window !== 'undefined' ? localStorage.getItem('imadeo_token') : null,
-  user: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('imadeo_user') || 'null') : null,
+  userdetails: typeof window !== 'undefined' && localStorage.getItem('imadeo_user') && localStorage.getItem('imadeo_user') !== 'undefined' ? JSON.parse(localStorage.getItem('imadeo_user') as string) : null,
   isAuthenticated: typeof window !== 'undefined' ? !!localStorage.getItem('imadeo_token') : false,
   isLoading: false,
   error: null,
-  login: (token, user) => {
+  login: (token, userdetails) => {
     localStorage.setItem('imadeo_token', token);
-    localStorage.setItem('imadeo_user', JSON.stringify(user));
-    set({ token, user, isAuthenticated: true, error: null });
+    localStorage.setItem('imadeo_user', JSON.stringify(userdetails));
+    set({ token, userdetails, isAuthenticated: true, error: null });
   },
   logout: () => {
     localStorage.removeItem('imadeo_token');
     localStorage.removeItem('imadeo_user');
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ token: null, userdetails: null, isAuthenticated: false });
   },
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
