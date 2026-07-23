@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Layers, Github, Chrome, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { api } from '@/services/api';
+import { useSignIn } from '@clerk/nextjs';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -22,32 +23,91 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, setLoading, setError } = useAuthStore();
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoading, error, setLoading, setError } = useAuthStore();
   const [rememberMe, setRememberMe] = useState(false);
+  const [pendingSecondFactor, setPendingSecondFactor] = useState(false);
+  const [code, setCode] = useState('');
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema)
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (!isLoaded) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/api/v1/auth/login',{
-        email:data.email,
-        password:data.password,
-        remember_me:rememberMe,
+      const result = await signIn.create({
+        identifier: data.email,
+        password: data.password,
       });
-      console.log("Response",response)
-      if(response.status === 200){
-        console.log("User logged in successfully")
-        console.log(response.data);
+
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        router.push('/dashboard');
+      } else if (result.status === 'needs_second_factor') {
+        const phoneFactor = result.supportedSecondFactors?.find((f: any) => f.strategy === 'phone_code');
+        if (phoneFactor) {
+           await signIn.prepareSecondFactor({
+             strategy: 'phone_code',
+             phoneNumberId: (phoneFactor as any).phoneNumberId
+           });
+        }
+        setPendingSecondFactor(true);
+      } else {
+        console.log("Investigate additional steps", result);
+        setError(`Login incomplete. Current status: ${result.status}. Check console for details.`);
       }
-      
-      login(response.data.token, response.data.userdetails);
-      router.push('/');
     } catch (err: any) {
-      setError(err?.message || 'Login failed. Please try again.');
+      console.error(JSON.stringify(err, null, 2));
+      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoaded) return;
+    setLoading(true);
+    setError(null);
+    try {
+      let strategyToTry: 'totp' | 'phone_code' = 'totp';
+      const hasPhone = signIn.supportedSecondFactors?.some((f: any) => f.strategy === 'phone_code');
+      const hasTotp = signIn.supportedSecondFactors?.some((f: any) => f.strategy === 'totp');
+      
+      if (hasPhone && !hasTotp) {
+        strategyToTry = 'phone_code';
+      }
+
+      let result;
+      try {
+        result = await signIn.attemptSecondFactor({
+          strategy: strategyToTry,
+          code,
+        });
+      } catch (err: any) {
+        if (strategyToTry === 'totp' && hasPhone) {
+          result = await signIn.attemptSecondFactor({
+            strategy: 'phone_code',
+            code,
+          });
+        } else {
+          throw err;
+        }
+      }
+
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        router.push('/dashboard');
+      } else {
+        console.log("Investigate additional steps", result);
+        setError(`Verification incomplete. Status: ${result.status}`);
+      }
+    } catch (err: any) {
+      console.error(JSON.stringify(err, null, 2));
+      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -86,82 +146,105 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Input
-              label="Email Address"
-              type="email"
-              placeholder="you@example.com"
-              error={errors.email?.message}
-              {...register('email')}
-            />
+          {!pendingSecondFactor ? (
+            <>
+              {/* Form */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <Input
+                  label="Email Address"
+                  type="email"
+                  placeholder="you@example.com"
+                  error={errors.email?.message}
+                  {...register('email')}
+                />
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Password
-                </label>
-                <Link href="#" className="text-xs font-medium text-primary hover:text-primary-light transition-colors">
-                  Forgot Password?
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Password
+                    </label>
+                    <Link href="#" className="text-xs font-medium text-primary hover:text-primary-light transition-colors">
+                      Forgot Password?
+                    </Link>
+                  </div>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    error={errors.password?.message}
+                    {...register('password')}
+                  />
+                </div>
+
+                {/* Remember Me */}
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-primary focus:ring-primary/20 bg-transparent"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 text-sm text-slate-650 dark:text-slate-400">
+                    Remember me for 30 days
+                  </label>
+                </div>
+
+                <Button type="submit" className="w-full" isLoading={isLoading}>
+                  Sign In
+                </Button>
+              </form>
+
+              {/* Social Logins */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-850" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background-light dark:bg-background-dark px-2 text-slate-400 font-semibold tracking-wider">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Button type="button" variant="outline" className="w-full" leftIcon={<Chrome className="w-4 h-4 text-red-550" />}>
+                    Google
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" leftIcon={<Github className="w-4 h-4" />}>
+                    GitHub
+                  </Button>
+                </div>
+              </div>
+
+              {/* Register Redirect */}
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
+                Don't have an account?{' '}
+                <Link href="/register" className="font-semibold text-primary hover:text-primary-light transition-colors">
+                  Sign up free
                 </Link>
+              </p>
+            </>
+          ) : (
+            <form onSubmit={onVerify2FA} className="space-y-5">
+              <div className="space-y-3">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Two-Step Verification</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Enter the verification code from your authenticator app or SMS.
+                </p>
               </div>
               <Input
-                type="password"
-                placeholder="••••••••"
-                error={errors.password?.message}
-                {...register('password')}
+                label="Verification Code"
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter your 6-digit code"
               />
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-primary focus:ring-primary/20 bg-transparent"
-              />
-              <label htmlFor="remember-me" className="ml-2 text-sm text-slate-650 dark:text-slate-400">
-                Remember me for 30 days
-              </label>
-            </div>
-
-            <Button type="submit" className="w-full" isLoading={isLoading}>
-              Sign In
-            </Button>
-          </form>
-
-          {/* Social Logins */}
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-850" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background-light dark:bg-background-dark px-2 text-slate-400 font-semibold tracking-wider">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Button type="button" variant="outline" className="w-full" leftIcon={<Chrome className="w-4 h-4 text-red-550" />}>
-                Google
+              <Button type="submit" className="w-full mt-2" isLoading={isLoading}>
+                Verify & Sign In
               </Button>
-              <Button type="button" variant="outline" className="w-full" leftIcon={<Github className="w-4 h-4" />}>
-                GitHub
-              </Button>
-            </div>
-          </div>
-
-          {/* Register Redirect */}
-          <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
-            Don't have an account?{' '}
-            <Link href="/register" className="font-semibold text-primary hover:text-primary-light transition-colors">
-              Sign up free
-            </Link>
-          </p>
+            </form>
+          )}
 
         </div>
       </div>
@@ -197,3 +280,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
