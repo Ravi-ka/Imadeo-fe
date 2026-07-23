@@ -1,9 +1,69 @@
-import { SignUp } from "@clerk/nextjs";
+import { SignUp } from '@clerk/nextjs';
+import Link from 'next/link';
+import { Layers } from 'lucide-react';
 
 export default function RegisterPage() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
-      <SignUp />
+    <div className="min-h-screen flex items-stretch bg-background-light dark:bg-background-dark">
+      
+      {/* Left side Form Container */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 py-12 md:px-16 lg:px-24 xl:px-32 z-10">
+        <div className="w-full max-w-md mx-auto space-y-8">
+          
+          {/* Logo & Header */}
+          <div className="space-y-3 flex flex-col items-center lg:items-start text-center lg:text-left">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white shadow-lg">
+                <Layers className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-bold text-slate-900 dark:text-white">Imadeo</span>
+            </Link>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-4">Create your account</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Get started with your high-speed media pipeline workspace.
+            </p>
+          </div>
+
+          <div className="w-full flex justify-center lg:justify-start">
+             <SignUp appearance={{
+               elements: {
+                 rootBox: "w-full",
+                 cardBox: "w-full shadow-xl rounded-2xl",
+               }
+             }} />
+          </div>
+
+        </div>
+      </div>
+
+      {/* Right side Brand panel (Desktop only) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-tr from-slate-900 via-secondary-dark to-slate-950 p-12 flex-col justify-between relative overflow-hidden">
+        {/* Glow lights */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative flex items-center space-x-2">
+          <div className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
+            <Layers className="w-5 h-5" />
+          </div>
+          <span className="text-xl font-bold text-white">Imadeo</span>
+        </div>
+
+        <div className="relative space-y-4 max-w-md">
+          <h3 className="text-3xl font-extrabold text-white leading-snug">
+            Designed for high performance.
+          </h3>
+          <p className="text-slate-300 text-sm leading-relaxed">
+            Register and spin up real-time media transformations. Decouple long-running video transcoding through distributed workers effortlessly.
+          </p>
+        </div>
+
+        <div className="relative text-xs text-slate-500 font-mono flex justify-between">
+          <span>SYSTEM STATUS: OK</span>
+          <span>LATENCY: 12ms</span>
+        </div>
+      </div>
+
     </div>
   );
 }
