@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { UploadCloud, X, File, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Asset } from './types';
@@ -16,12 +17,20 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalPro
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { user } = useUser();
 
   if (!isOpen) return null;
 
   const handleSimulatedUpload = () => {
     setIsUploading(true);
     setProgress(10);
+
+    const uploaderName = user 
+      ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
+      : 'Alex Morgan';
+
+    const uploaderEmail = user?.primaryEmailAddress?.emailAddress || 'alex.m@imadeo.io';
+    const uploaderAvatar = user?.imageUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -47,9 +56,9 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalPro
               updatedAt: 'Just now',
               createdAt: '2026-07-25',
               owner: {
-                name: 'Alex Morgan',
-                avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-                email: 'alex.m@imadeo.io'
+                name: uploaderName,
+                avatarUrl: uploaderAvatar,
+                email: uploaderEmail
               },
               isFavorite: false,
               isShared: false,

@@ -19,6 +19,7 @@ import {
   UserCheck,
   Sparkles
 } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,6 +39,20 @@ export function Sidebar({
   favoritesCount 
 }: SidebarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, isLoaded } = useUser();
+  const { signOut, openUserProfile } = useClerk();
+
+  const userName = isLoaded && user
+    ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
+    : 'Alex Morgan';
+
+  const userEmail = isLoaded && user?.primaryEmailAddress?.emailAddress
+    ? user.primaryEmailAddress.emailAddress
+    : 'alex.m@imadeo.io';
+
+  const userAvatar = isLoaded && user?.imageUrl
+    ? user.imageUrl
+    : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
 
   const navItems: { id: NavCategory; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -183,8 +198,8 @@ export function Sidebar({
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="relative shrink-0">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
-                alt="Alex Morgan"
+                src={userAvatar}
+                alt={userName}
                 className="w-9 h-9 rounded-full object-cover border-2 border-primary/40"
               />
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
@@ -192,10 +207,10 @@ export function Sidebar({
             {!isCollapsed && (
               <div className="flex flex-col overflow-hidden text-left">
                 <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                  Alex Morgan
+                  {userName}
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  Lead Asset Manager
+                  {userEmail}
                 </span>
               </div>
             )}
@@ -217,18 +232,28 @@ export function Sidebar({
               } bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 space-y-1 min-w-[200px]`}
             >
               <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-xs font-semibold text-slate-900 dark:text-white">alex.m@imadeo.io</p>
-                <p className="text-[11px] text-slate-400">Organization Admin</p>
+                <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{userName}</p>
+                <p className="text-[11px] text-slate-400 truncate">{userEmail}</p>
               </div>
               <button 
-                onClick={() => { setShowUserMenu(false); onSelectNav('settings'); }}
+                onClick={() => {
+                  setShowUserMenu(false);
+                  if (openUserProfile) {
+                    openUserProfile();
+                  } else {
+                    onSelectNav('settings');
+                  }
+                }}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               >
                 <UserCheck className="w-4 h-4 text-primary" />
                 <span>Account Profile</span>
               </button>
               <button 
-                onClick={() => setShowUserMenu(false)}
+                onClick={() => {
+                  setShowUserMenu(false);
+                  signOut({ redirectUrl: '/login' });
+                }}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors"
               >
                 <LogOut className="w-4 h-4" />
