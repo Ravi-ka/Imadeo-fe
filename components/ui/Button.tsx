@@ -1,15 +1,16 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  fullWidth?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 }
@@ -20,6 +21,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   isLoading = false,
+  fullWidth = false,
   leftIcon,
   rightIcon,
   disabled,
@@ -45,9 +47,9 @@ export function Button({
     <motion.button
       whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
       whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
-      className={twMerge(clsx(baseStyles, variants[variant], sizes[size], className))}
+      className={twMerge(clsx(baseStyles, variants[variant], sizes[size], fullWidth && 'w-full', className))}
       disabled={disabled || isLoading}
-      {...props}
+      {...(props as any)}
     >
       {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
       {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
