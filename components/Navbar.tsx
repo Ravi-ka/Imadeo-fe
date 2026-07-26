@@ -36,9 +36,9 @@ export function Navbar() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
             <div className="flex space-x-6">
-              {navLinks.map((link) => (
+              {navLinks.map((link, idx) => (
                 <Link
-                  key={link.name}
+                  key={`${link.name}-${idx}`}
                   href={link.href}
                   className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary-light transition-colors"
                 >
@@ -96,9 +96,9 @@ export function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark px-4 py-4 space-y-3 shadow-xl"
           >
-            {navLinks.map((link) => (
+            {navLinks.map((link, idx) => (
               <Link
-                key={link.name}
+                key={`mobile-${link.name}-${idx}`}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
                 className="block py-2 text-base font-medium text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary-light"

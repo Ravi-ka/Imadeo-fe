@@ -320,9 +320,9 @@ export function AssetDetailsDrawer({
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
+              {tags.map((tag, idx) => (
                 <span
-                  key={tag}
+                  key={`${tag}-${idx}`}
                   className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1 group"
                 >
                   #{tag}

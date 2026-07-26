@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { Sidebar } from '@/components/dam/Sidebar';
 import { Header } from '@/components/dam/Header';
 import { StatsOverview } from '@/components/dam/StatsOverview';
@@ -8,6 +9,8 @@ import { FolderSection } from '@/components/dam/FolderSection';
 import { AssetGrid } from '@/components/dam/AssetGrid';
 import { AssetDetailsDrawer } from '@/components/dam/AssetDetailsDrawer';
 import { UploadModal } from '@/components/dam/UploadModal';
+import { CreateImadeoIdModal } from '@/components/dam/CreateImadeoIdModal';
+import { getImadeoIdApi, createImadeoIdApi } from '@/services/imadeoService';
 import { 
   initialAssets, 
   initialFolders, 
@@ -22,9 +25,17 @@ import {
   ViewMode 
 } from '@/components/dam/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Sparkles, FolderOpen, ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
+import { CheckCircle2, Sparkles, FolderOpen, ArrowLeft, Settings as SettingsIcon, Loader2, Layers } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { userId, getToken, isLoaded: isAuthLoaded } = useAuth();
+  const { user } = useUser();
+
+  // Imadeo ID Check & Modal State
+  const [imadeoId, setImadeoId] = useState<string | null>(null);
+  const [isCheckingImadeoId, setIsCheckingImadeoId] = useState(true);
+  const [showCreateImadeoModal, setShowCreateImadeoModal] = useState(false);
+
   // Navigation & Sidebar State
   const [activeNav, setActiveNav] = useState<NavCategory>('media-assets');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -54,6 +65,76 @@ export default function DashboardPage() {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  // Check permanent Imadeo ID status from DB on mount / auth load / user session change
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkImadeoIdStatus = async () => {
+      if (!isAuthLoaded) return;
+
+      const activeUserId = userId || user?.id;
+
+      if (!activeUserId) {
+        if (isMounted) {
+          setImadeoId(null);
+          setShowCreateImadeoModal(false);
+          setIsCheckingImadeoId(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsCheckingImadeoId(true);
+      }
+
+      try {
+        // Get fresh JWT token for the currently active Clerk user session
+        const token = await getToken({ skipCache: true });
+        
+        // Fetch permanent Imadeo ID from backend database
+        const fetchedId = await getImadeoIdApi(token);
+
+        if (!isMounted) return;
+
+        if (fetchedId) {
+          // Imadeo ID exists permanently in database for this account!
+          setImadeoId(fetchedId);
+          setShowCreateImadeoModal(false);
+        } else {
+          // Imadeo ID is null in DB (new user account) -> prompt user to create their permanent handle
+          setImadeoId(null);
+          setShowCreateImadeoModal(true);
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.warn('Backend Imadeo ID check error:', err?.message);
+        setImadeoId(null);
+        setShowCreateImadeoModal(true);
+      } finally {
+        if (isMounted) {
+          setIsCheckingImadeoId(false);
+        }
+      }
+    };
+
+    checkImadeoIdStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthLoaded, userId, user?.id, getToken]);
+
+  // Handle creation of new permanent Imadeo ID in the backend database
+  const handleCreateImadeoId = async (newId: string) => {
+    const token = await getToken({ skipCache: true });
+    await createImadeoIdApi(newId, token);
+
+    // Update permanent Imadeo ID state upon 200 OK success from DB
+    setImadeoId(newId);
+    setShowCreateImadeoModal(false);
+    triggerToast(`Imadeo ID "@${newId}" successfully created! Welcome to your DAM Dashboard.`);
   };
 
   // Nav Selection Handler
@@ -110,7 +191,8 @@ export default function DashboardPage() {
   const handleShareAsset = (item: Asset | string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const itemName = typeof item === 'string' ? item : item.name;
-    navigator.clipboard.writeText(`https://imadeo.io/assets/share/${Date.now()}`);
+    const sharePrefix = imadeoId ? `@${imadeoId}` : 'imadeo';
+    navigator.clipboard.writeText(`https://imadeo.io/${sharePrefix}/assets/share/${Date.now()}`);
     triggerToast(`Share link copied for "${itemName}"`);
   };
 
@@ -193,6 +275,19 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
       
+      {/* Initial Loading Screen during Imadeo ID Verification */}
+      {isCheckingImadeoId && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center space-y-4 text-white">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary via-secondary to-accent flex items-center justify-center shadow-lg shadow-primary/40 animate-pulse">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div className="flex items-center space-x-2 text-sm font-medium text-slate-400">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Connecting to Imadeo backend & verifying permanent workspace handle...</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         
         {/* Collapsible Left Navigation Sidebar (Fixed Position) */}
@@ -202,6 +297,7 @@ export default function DashboardPage() {
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           favoritesCount={favoritesCount}
+          imadeoId={imadeoId}
         />
 
         {/* Main DAM Dashboard Content Area */}
@@ -237,9 +333,9 @@ export default function DashboardPage() {
                     <span className="inline-block px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 font-semibold text-xs">Active</span>
                   </div>
                   <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
-                    <h4 className="font-bold">Storage Optimization</h4>
-                    <p className="text-xs text-slate-400">De-duplicate identical media binaries and archive files older than 365 days.</p>
-                    <span className="inline-block px-2 py-1 rounded bg-primary/10 text-primary font-semibold text-xs">Enabled</span>
+                    <h4 className="font-bold">Permanent Imadeo Handle</h4>
+                    <p className="text-xs text-slate-400">Your permanent workspace handle: <span className="font-mono text-primary font-bold">@{imadeoId || 'not_set'}</span></p>
+                    <span className="inline-block px-2 py-1 rounded bg-primary/10 text-primary font-semibold text-xs">Permanent</span>
                   </div>
                 </div>
               </div>
@@ -292,6 +388,12 @@ export default function DashboardPage() {
         />
 
       </div>
+
+      {/* Mandatory Blocking Modal when Imadeo ID is null */}
+      <CreateImadeoIdModal
+        isOpen={showCreateImadeoModal && !isCheckingImadeoId}
+        onSubmit={handleCreateImadeoId}
+      />
 
       {/* Upload Modal Overlay */}
       <UploadModal

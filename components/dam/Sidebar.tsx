@@ -17,9 +17,11 @@ import {
   MoreVertical,
   LogOut,
   UserCheck,
-  Sparkles
+  Sparkles,
+  AtSign
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
+import { useAuthStore } from '@/store/useAuthStore';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,6 +31,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   favoritesCount: number;
+  imadeoId?: string | null;
 }
 
 export function Sidebar({ 
@@ -36,7 +39,8 @@ export function Sidebar({
   onSelectNav, 
   isCollapsed, 
   onToggleCollapse,
-  favoritesCount 
+  favoritesCount,
+  imadeoId
 }: SidebarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isLoaded } = useUser();
@@ -209,8 +213,8 @@ export function Sidebar({
                 <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   {userName}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {userEmail}
+                <span className="text-xs font-mono font-medium text-primary dark:text-primary-light truncate flex items-center gap-0.5">
+                  {imadeoId ? `@${imadeoId}` : '@no_id_set'}
                 </span>
               </div>
             )}
@@ -233,6 +237,7 @@ export function Sidebar({
             >
               <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                 <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{userName}</p>
+                <p className="text-[11px] font-mono text-primary font-semibold">@{imadeoId || 'no_id_set'}</p>
                 <p className="text-[11px] text-slate-400 truncate">{userEmail}</p>
               </div>
               <button 
@@ -252,11 +257,17 @@ export function Sidebar({
               <button 
                 onClick={() => {
                   setShowUserMenu(false);
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('imadeo_token');
+                    localStorage.removeItem('imadeo_user');
+                    sessionStorage.clear();
+                  }
+                  useAuthStore.getState().logout();
                   signOut({ redirectUrl: '/login' });
                 }}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 text-danger" />
                 <span>Sign Out</span>
               </button>
             </motion.div>

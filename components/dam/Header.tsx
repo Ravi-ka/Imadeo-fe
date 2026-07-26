@@ -56,7 +56,7 @@ export function Header({
           {/* Breadcrumbs */}
           <nav className="flex items-center space-x-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={crumb}>
+              <React.Fragment key={`${crumb}-${idx}`}>
                 {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                 <span className={idx === breadcrumbs.length - 1 ? 'text-primary dark:text-primary-light font-semibold' : 'hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer'}>
                   {crumb}
