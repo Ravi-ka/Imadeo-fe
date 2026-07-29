@@ -39,16 +39,27 @@ export interface Asset {
 
 export interface Folder {
   id: string;
+  tenantId: string;
+  userId: string;
   name: string;
-  itemCount: number;
-  totalSize: string;
+  parentId: string | null;
+  createdAt: string;
   updatedAt: string;
-  color: string;
-  iconName?: string;
-  coverImage?: string;
-  path: string;
-  description?: string;
+  _count?: { children: number; assets: number };
 }
+
+export type FolderTreeNode = Folder & { children: FolderTreeNode[] };
+
+export interface Workspace {
+  id: string;
+  name?: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+}
+
+export type ApiError = {
+  error: string;
+  details?: Array<{ path: string; message: string; code: string }>;
+};
 
 export interface DAMStat {
   label: string;

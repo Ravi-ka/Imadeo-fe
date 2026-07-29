@@ -34,6 +34,7 @@ interface AssetDetailsDrawerProps {
   onToggleFavorite: (assetId: string) => void;
   onDeleteAsset: (assetId: string) => void;
   onShare: (name: string) => void;
+  onMoveAsset?: (assetId: string) => void;
 }
 
 export function AssetDetailsDrawer({
@@ -42,7 +43,8 @@ export function AssetDetailsDrawer({
   onClose,
   onToggleFavorite,
   onDeleteAsset,
-  onShare
+  onShare,
+  onMoveAsset
 }: AssetDetailsDrawerProps) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -230,6 +232,16 @@ export function AssetDetailsDrawer({
               >
                 <Trash2 className="w-4 h-4 mb-1" />
                 <span className="text-[11px] font-semibold">Delete</span>
+              </button>
+            )}
+
+            {selectedAsset && onMoveAsset && (
+              <button
+                onClick={() => onMoveAsset(selectedAsset.id)}
+                className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+              >
+                <MoveRight className="w-4 h-4 text-indigo-500 mb-1" />
+                <span className="text-[11px] font-semibold">Move</span>
               </button>
             )}
           </div>

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useFolderTree } from '@/hooks/useFolders';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,6 +33,7 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   favoritesCount: number;
   imadeoId?: string | null;
+  activeTenantId?: string;
 }
 
 export function Sidebar({ 
@@ -40,11 +42,15 @@ export function Sidebar({
   isCollapsed, 
   onToggleCollapse,
   favoritesCount,
-  imadeoId
+  imadeoId,
+  activeTenantId
 }: SidebarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isLoaded } = useUser();
   const { signOut, openUserProfile } = useClerk();
+  
+  // Custom Hook for Folders Tree
+  const { data: folderTree = [] } = useFolderTree(activeTenantId || '');
 
   const userName = isLoaded && user
     ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')

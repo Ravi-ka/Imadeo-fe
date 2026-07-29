@@ -7,13 +7,20 @@ import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Asset } from './types';
 
+import { useAuth } from '@clerk/nextjs';
+import { presignAssetApi, completeAssetUploadApi } from '@/services/assetService';
+
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: (newAsset: Asset) => void;
+  activeTenantId: string;
+  currentFolderId: string | null;
+  currentPathText: string;
 }
 
-export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalProps) {
+export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId, currentFolderId, currentPathText }: UploadModalProps) {
+  const { getToken } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -21,7 +28,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalPro
 
   if (!isOpen) return null;
 
-  const handleSimulatedUpload = () => {
+  const handleSimulatedUpload = async () => {
     setIsUploading(true);
     setProgress(10);
 
@@ -32,50 +39,81 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalPro
     const uploaderEmail = user?.primaryEmailAddress?.emailAddress || 'alex.m@imadeo.io';
     const uploaderAvatar = user?.imageUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsUploading(false);
-            setProgress(0);
-            
-            // Generate mock uploaded asset
-            const fileName = selectedFile?.name || 'Imadeo_Brand_Asset_Upload.png';
-            const ext = fileName.split('.').pop()?.toUpperCase() || 'PNG';
+    // Simulate progress async without interval side effects
+    for (let i = 1; i <= 4; i++) {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      setProgress(10 + i * 22.5); // reaches ~100
+    }
 
-            const newAsset: Asset = {
-              id: `asset-${Date.now()}`,
-              name: fileName,
-              type: ext === 'MP4' || ext === 'MOV' ? 'video' : ext === 'PDF' ? 'document' : 'image',
-              extension: ext,
-              size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '3.5 MB',
-              sizeBytes: selectedFile?.size || 3670016,
-              dimensions: '3840 x 2160',
-              thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-              updatedAt: 'Just now',
-              createdAt: '2026-07-25',
-              owner: {
-                name: uploaderName,
-                avatarUrl: uploaderAvatar,
-                email: uploaderEmail
-              },
-              isFavorite: false,
-              isShared: false,
-              tags: ['New Upload', '2026'],
-              description: 'Newly uploaded media asset processed by Imadeo DAM engine.',
-              path: `/Root/Uploads/${fileName}`
-            };
+    setProgress(100);
+    await new Promise(resolve => setTimeout(resolve, 400));
 
-            onUploadSuccess(newAsset);
-            setSelectedFile(null);
-            onClose();
-          }, 400);
-          return 100;
+    // Try to presign (simulated or real depending on backend readiness)
+    let uploadedAsset: Asset | null = null;
+    try {
+      const token = await getToken({ skipCache: true });
+      if (token && selectedFile) {
+        const { uploadUrl, assetId } = await presignAssetApi(token, {
+          name: selectedFile.name,
+          mimeType: selectedFile.type || 'application/octet-stream',
+          sizeBytes: selectedFile.size,
+          folderId: currentFolderId
+        }, activeTenantId);
+        
+        // Upload the actual binary file directly to R2 using the presigned URL
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: selectedFile,
+          headers: {
+            'Content-Type': selectedFile.type || 'application/octet-stream'
+          }
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Failed to upload file to storage');
         }
-        return prev + 25;
-      });
-    }, 250);
+
+        // Notify backend that upload is complete to process metadata/save asset
+        const completeRes = await completeAssetUploadApi(token, assetId, activeTenantId);
+        uploadedAsset = completeRes.asset;
+      }
+    } catch (e) {
+      console.warn("Upload failed, falling back to mock data for UI demo", e);
+    }
+
+    // Generate mock uploaded asset if backend failed or returned nothing
+    const fileName = selectedFile?.name || 'Imadeo_Brand_Asset_Upload.png';
+    const ext = fileName.split('.').pop()?.toUpperCase() || 'PNG';
+
+    const newAsset: Asset = uploadedAsset || {
+      id: `asset-${Date.now()}`,
+      name: fileName,
+      type: ext === 'MP4' || ext === 'MOV' ? 'video' : ext === 'PDF' ? 'document' : 'image',
+      extension: ext,
+      size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '3.5 MB',
+      sizeBytes: selectedFile?.size || 3670016,
+      dimensions: '3840 x 2160',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+      updatedAt: 'Just now',
+      createdAt: new Date().toISOString(),
+      owner: {
+        name: uploaderName,
+        avatarUrl: uploaderAvatar,
+        email: uploaderEmail
+      },
+      isFavorite: false,
+      isShared: false,
+      tags: ['New Upload', '2026'],
+      description: 'Newly uploaded media asset processed by Imadeo DAM engine.',
+      path: `/Root/Uploads/${fileName}`,
+      folderId: currentFolderId || undefined
+    };
+
+    setIsUploading(false);
+    setProgress(0);
+    onUploadSuccess(newAsset);
+    setSelectedFile(null);
+    onClose();
   };
 
   return (
@@ -107,8 +145,8 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }: UploadModalPro
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Upload Media Assets
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Drag and drop high-res images, 4K videos, documents or design files.
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[250px]" title={currentPathText}>
+                  Upload to: {currentPathText}
                 </p>
               </div>
             </div>

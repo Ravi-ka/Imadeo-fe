@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  allowedDevOrigins:["http://172.30.7.78:5000*"],
+  allowedDevOrigins:["https://unfrosted-secret-barista.ngrok-free.dev"],
   images: {
     remotePatterns: [
       {

@@ -20,6 +20,7 @@ interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenUpload: () => void;
+  onOpenCreateFolder: () => void;
   selectedCount?: number;
   totalAssetsCount: number;
 }
@@ -30,10 +31,24 @@ export function Header({
   searchQuery,
   onSearchChange,
   onOpenUpload,
+  onOpenCreateFolder,
   selectedCount = 0,
   totalAssetsCount
 }: HeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadDropdownOpen, setIsUploadDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsUploadDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Keyboard shortcut listener to focus search on '/' keypress
   React.useEffect(() => {
@@ -126,14 +141,33 @@ export function Header({
           {/* Theme Toggle */}
           <ThemeToggle />
 
-          {/* Prominent Upload Assets Button */}
-          <Button
-            onClick={onOpenUpload}
-            className="bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark text-white font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all rounded-xl px-4 py-2.5"
-            leftIcon={<Plus className="w-4 h-4 stroke-[3]" />}
-          >
-            Upload Assets
-          </Button>
+          {/* Prominent Upload / Create Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <Button
+              onClick={() => setIsUploadDropdownOpen(!isUploadDropdownOpen)}
+              className="bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark text-white font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all rounded-xl px-4 py-2.5"
+              leftIcon={<Plus className="w-4 h-4 stroke-[3]" />}
+            >
+              Add New
+            </Button>
+            
+            {isUploadDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                <button 
+                  onClick={() => { setIsUploadDropdownOpen(false); onOpenUpload(); }}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Upload files
+                </button>
+                <button 
+                  onClick={() => { setIsUploadDropdownOpen(false); onOpenCreateFolder(); }}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary transition-colors flex items-center gap-2"
+                >
+                  <FolderOpen className="w-4 h-4" /> Create folder
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
