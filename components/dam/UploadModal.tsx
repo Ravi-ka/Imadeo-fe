@@ -15,11 +15,9 @@ interface UploadModalProps {
   onClose: () => void;
   onUploadSuccess: (newAsset: Asset) => void;
   activeTenantId: string;
-  currentFolderId: string | null;
-  currentPathText: string;
 }
 
-export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId, currentFolderId, currentPathText }: UploadModalProps) {
+export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }: UploadModalProps) {
   const { getToken } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -56,8 +54,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId, 
         const { uploadUrl, assetId } = await presignAssetApi(token, {
           name: selectedFile.name,
           mimeType: selectedFile.type || 'application/octet-stream',
-          sizeBytes: selectedFile.size,
-          folderId: currentFolderId
+          sizeBytes: selectedFile.size
         }, activeTenantId);
         
         // Upload the actual binary file directly to R2 using the presigned URL
@@ -105,8 +102,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId, 
       isShared: false,
       tags: ['New Upload', '2026'],
       description: 'Newly uploaded media asset processed by Imadeo DAM engine.',
-      path: `/Root/Uploads/${fileName}`,
-      folderId: currentFolderId || undefined
+      path: `/Root/Uploads/${fileName}`
     };
 
     setIsUploading(false);
@@ -145,9 +141,6 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId, 
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Upload Media Assets
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[250px]" title={currentPathText}>
-                  Upload to: {currentPathText}
-                </p>
               </div>
             </div>
 

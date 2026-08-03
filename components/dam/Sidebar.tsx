@@ -6,7 +6,6 @@ import {
   LayoutDashboard, 
   Image as ImageIcon, 
   Boxes, 
-  Folder, 
   Users, 
   Clock, 
   Star, 
@@ -22,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useFolderTree } from '@/hooks/useFolders';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -48,9 +46,6 @@ export function Sidebar({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isLoaded } = useUser();
   const { signOut, openUserProfile } = useClerk();
-  
-  // Custom Hook for Folders Tree
-  const { data: folderTree = [] } = useFolderTree(activeTenantId || '');
 
   const userName = isLoaded && user
     ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
@@ -68,7 +63,6 @@ export function Sidebar({
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'media-assets', label: 'Media Assets', icon: <ImageIcon className="w-5 h-5" />, badge: '1,482' },
     { id: 'collections', label: 'Collections', icon: <Boxes className="w-5 h-5" /> },
-    { id: 'folders', label: 'Folders', icon: <Folder className="w-5 h-5" />, badge: 6 },
     { id: 'shared', label: 'Shared with Me', icon: <Users className="w-5 h-5" /> },
     { id: 'recent', label: 'Recent Activity', icon: <Clock className="w-5 h-5" /> },
     { id: 'favorites', label: 'Favorites', icon: <Star className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },

@@ -2,7 +2,6 @@ export type NavCategory =
   | 'overview'
   | 'media-assets'
   | 'collections'
-  | 'folders'
   | 'shared'
   | 'recent'
   | 'favorites'
@@ -31,24 +30,11 @@ export interface Asset {
   };
   isFavorite: boolean;
   isShared?: boolean;
-  folderId?: string;
   tags: string[];
   description?: string;
   path: string;
 }
 
-export interface Folder {
-  id: string;
-  tenantId: string;
-  userId: string;
-  name: string;
-  parentId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  _count?: { children: number; assets: number };
-}
-
-export type FolderTreeNode = Folder & { children: FolderTreeNode[] };
 
 export interface Workspace {
   id: string;

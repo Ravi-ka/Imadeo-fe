@@ -31,16 +31,9 @@ async function assetsFetch<T>(path: string, token: string, opts: FetchOptions): 
 
 export const getAssetsApi = async (
   token: string, 
-  tenantId?: string, 
-  folderId?: string | null,
-  root?: boolean
+  tenantId?: string
 ): Promise<Asset[]> => {
-  const query = new URLSearchParams();
-  if (folderId) query.append('folderId', folderId);
-  if (root) query.append('root', 'true');
-  
-  const queryString = query.toString();
-  const path = `/api/assets${queryString ? `?${queryString}` : ''}`;
+  const path = `/api/assets`;
   
   const res = await assetsFetch<any>(path, token, { tenantId });
   return res.assets || (Array.isArray(res) ? res : []);
@@ -48,7 +41,7 @@ export const getAssetsApi = async (
 
 export const presignAssetApi = async (
   token: string,
-  data: { name: string; mimeType: string; sizeBytes: number; folderId?: string | null },
+  data: { name: string; mimeType: string; sizeBytes: number },
   tenantId?: string
 ): Promise<{ uploadUrl: string; assetId: string }> => {
   return assetsFetch<{ uploadUrl: string; assetId: string }>('/api/assets/presign', token, {
@@ -67,18 +60,4 @@ export const completeAssetUploadApi = async (
     method: 'POST',
     tenantId,
   });
-};
-
-export const moveAssetApi = async (
-  token: string,
-  id: string,
-  folderId: string | null,
-  tenantId?: string
-): Promise<Asset> => {
-  const res = await assetsFetch<{ asset: Asset }>(`/api/assets/${id}`, token, {
-    method: 'PATCH',
-    body: JSON.stringify({ folderId }),
-    tenantId,
-  });
-  return res.asset;
 };

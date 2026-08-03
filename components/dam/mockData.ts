@@ -1,73 +1,4 @@
-import { Asset, Folder, DAMStat } from './types';
-
-export const initialFolders: Folder[] = [
-  {
-    id: 'folder-1',
-    name: 'Brand Assets',
-    itemCount: 142,
-    totalSize: '4.2 GB',
-    updatedAt: '2 hours ago',
-    color: 'from-blue-500 to-indigo-600',
-    coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Brand Assets',
-    description: 'Official logos, brand identity guidelines, icons, color palettes, and press kit assets.'
-  },
-  {
-    id: 'folder-2',
-    name: 'Product Photography',
-    itemCount: 320,
-    totalSize: '18.5 GB',
-    updatedAt: 'Yesterday',
-    color: 'from-purple-500 to-pink-600',
-    coverImage: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Product Photography',
-    description: 'High-res studio photography of product lineup for Q3 e-commerce release.'
-  },
-  {
-    id: 'folder-3',
-    name: 'Marketing Campaigns',
-    itemCount: 88,
-    totalSize: '6.1 GB',
-    updatedAt: '3 days ago',
-    color: 'from-cyan-500 to-blue-600',
-    coverImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Marketing Campaigns',
-    description: 'Digital display ads, social banners, email header visuals, and promo flyers.'
-  },
-  {
-    id: 'folder-4',
-    name: 'Social Media',
-    itemCount: 215,
-    totalSize: '9.4 GB',
-    updatedAt: 'Jul 20, 2026',
-    color: 'from-amber-500 to-rose-500',
-    coverImage: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Social Media',
-    description: 'Instagram stories, TikTok motion templates, LinkedIn carousels, and X headers.'
-  },
-  {
-    id: 'folder-5',
-    name: 'Videos & Motion',
-    itemCount: 45,
-    totalSize: '22.8 GB',
-    updatedAt: 'Jul 18, 2026',
-    color: 'from-emerald-500 to-teal-600',
-    coverImage: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Videos & Motion',
-    description: 'Raw video footage, edited product reels, promotional teasers, and 3D motion clips.'
-  },
-  {
-    id: 'folder-6',
-    name: 'Documents & Guidelines',
-    itemCount: 64,
-    totalSize: '1.2 GB',
-    updatedAt: 'Jul 12, 2026',
-    color: 'from-violet-500 to-indigo-500',
-    coverImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80',
-    path: '/Root/Documents & Guidelines',
-    description: 'PDF pitch decks, brand strategy docs, copywriting guides, and licensing contracts.'
-  }
-];
+import { Asset, DAMStat } from './types';
 
 export const initialAssets: Asset[] = [
   {
@@ -88,10 +19,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: true,
     isShared: true,
-    folderId: 'folder-1',
     tags: ['Hero', 'Banner', 'Brand', '2026', 'Dark Theme'],
     description: 'Official 4K desktop homepage banner graphic showcasing dynamic lighting gradients.',
-    path: '/Root/Brand Assets/Imadeo_Hero_Banner_2026.png'
   },
   {
     id: 'asset-2',
@@ -113,10 +42,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: true,
     isShared: false,
-    folderId: 'folder-5',
     tags: ['Video', 'Teaser', 'Product', 'Motion', '4K'],
     description: 'Teaser motion video for the upcoming v2.0 software launch event.',
-    path: '/Root/Videos & Motion/Product_Launch_Teaser_4K.mp4'
   },
   {
     id: 'asset-3',
@@ -135,10 +62,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: true,
-    folderId: 'folder-6',
     tags: ['Guidelines', 'PDF', 'Brand', 'Typography', 'Logo Rules'],
     description: 'Comprehensive brand standards document covering logo usage, color ratios, and editorial voice.',
-    path: '/Root/Documents & Guidelines/Brand_Identity_Guidelines_v3.pdf'
   },
   {
     id: 'asset-4',
@@ -158,10 +83,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: false,
-    folderId: 'folder-2',
     tags: ['Product', 'Watch', 'Studio', 'Photography'],
     description: 'Clean studio background photo of white minimalist wrist watch.',
-    path: '/Root/Product Photography/Minimalist_Watch_Collection.jpg'
   },
   {
     id: 'asset-5',
@@ -180,10 +103,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: true,
     isShared: true,
-    folderId: 'folder-1',
     tags: ['Figma', 'UI Kit', 'Components', 'Design System'],
     description: 'Complete Figma master design system file containing component libraries and tokens.',
-    path: '/Root/Brand Assets/Dashboard_System_UI_Kit.fig'
   },
   {
     id: 'asset-6',
@@ -205,10 +126,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: false,
-    folderId: 'folder-4',
     tags: ['Social', 'Instagram', 'Story', 'Summer', 'Video'],
     description: 'Vertical 9:16 video ad optimized for Instagram and TikTok stories.',
-    path: '/Root/Social Media/Summer_Promo_Campaign_Story.mp4'
   },
   {
     id: 'asset-7',
@@ -227,10 +146,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: true,
-    folderId: 'folder-3',
     tags: ['Presentation', 'Strategy', 'Q3', 'Deck'],
     description: 'Executive pitch deck for Q3 digital asset expansion strategy.',
-    path: '/Root/Marketing Campaigns/Q3_Growth_Strategy_Presentation.pdf'
   },
   {
     id: 'asset-8',
@@ -250,10 +167,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: true,
     isShared: false,
-    folderId: 'folder-1',
     tags: ['3D', 'Render', 'Abstract', 'Gradients', 'Wallpaper'],
     description: 'High-definition 3D glassmorphic spheres render with vibrant glowing reflections.',
-    path: '/Root/Brand Assets/3D_Abstract_Gradient_Spheres.png'
   },
   {
     id: 'asset-9',
@@ -273,10 +188,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: true,
-    folderId: 'folder-1',
     tags: ['Audio', 'Jingle', 'Sonic Brand', 'HQ Sound'],
     description: '15-second audio logo sound identifier for commercial video openers.',
-    path: '/Root/Brand Assets/Audio_Sonic_Branding_Jingle.wav'
   },
   {
     id: 'asset-10',
@@ -296,10 +209,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: true,
     isShared: false,
-    folderId: 'folder-2',
     tags: ['Headphones', 'Product', 'Audio', 'Studio'],
     description: 'Black noise-canceling wireless headphones studio hero photography.',
-    path: '/Root/Product Photography/Wireless_Headphones_Product_Shot.jpg'
   },
   {
     id: 'asset-11',
@@ -318,10 +229,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: false,
-    folderId: 'folder-6',
     tags: ['Document', 'Word', 'Copywriting', 'Annual Report'],
     description: 'Approved copy manuscript for the 2026 Annual Performance Report.',
-    path: '/Root/Documents & Guidelines/Annual_Report_Copywriting_Final.docx'
   },
   {
     id: 'asset-12',
@@ -341,10 +250,8 @@ export const initialAssets: Asset[] = [
     },
     isFavorite: false,
     isShared: true,
-    folderId: 'folder-3',
     tags: ['Illustrator', 'Vector', 'Concept', 'Futuristic'],
     description: 'Vector Illustrator keyframe illustration for futuristic gaming campaign.',
-    path: '/Root/Marketing Campaigns/Cyberpunk_City_Concept_Illustration.ai'
   }
 ];
 

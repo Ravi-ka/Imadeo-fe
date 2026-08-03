@@ -8,7 +8,6 @@ import {
   Edit3, 
   Trash2, 
   Star, 
-  Folder, 
   FileText, 
   Play, 
   Pause, 
@@ -24,33 +23,31 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
-import { Asset, Folder as FolderType } from './types';
+import { Asset } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AssetDetailsDrawerProps {
   selectedAsset: Asset | null;
-  selectedFolder: FolderType | null;
+
   onClose: () => void;
   onToggleFavorite: (assetId: string) => void;
   onDeleteAsset: (assetId: string) => void;
   onShare: (name: string) => void;
-  onMoveAsset?: (assetId: string) => void;
+
 }
 
 export function AssetDetailsDrawer({
   selectedAsset,
-  selectedFolder,
   onClose,
   onToggleFavorite,
   onDeleteAsset,
-  onShare,
-  onMoveAsset
+  onShare
 }: AssetDetailsDrawerProps) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionText, setDescriptionText] = useState(
-    selectedAsset?.description || selectedFolder?.description || ''
+    selectedAsset?.description || ''
   );
   const [newTagInput, setNewTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(selectedAsset?.tags || ['Brand', 'Imadeo', '2026']);
@@ -60,17 +57,13 @@ export function AssetDetailsDrawer({
     if (selectedAsset) {
       setDescriptionText(selectedAsset.description || '');
       setTags(selectedAsset.tags || []);
-    } else if (selectedFolder) {
-      setDescriptionText(selectedFolder.description || '');
-      setTags(['Folder', 'Collection']);
     }
-  }, [selectedAsset, selectedFolder]);
+  }, [selectedAsset]);
 
-  if (!selectedAsset && !selectedFolder) return null;
+  if (!selectedAsset) return null;
 
-  const isFolder = !!selectedFolder && !selectedAsset;
-  const title = selectedAsset ? selectedAsset.name : selectedFolder?.name || '';
-  const path = selectedAsset ? selectedAsset.path : selectedFolder?.path || '';
+  const title = selectedAsset.name || '';
+  const path = selectedAsset.path || '';
 
   const handleCopyPath = () => {
     navigator.clipboard.writeText(path);
@@ -112,13 +105,9 @@ export function AssetDetailsDrawer({
         {/* Top Drawer Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center space-x-2">
-            {isFolder ? (
-              <Folder className="w-5 h-5 text-amber-500" />
-            ) : (
-              <FileText className="w-5 h-5 text-primary" />
-            )}
+            <FileText className="w-5 h-5 text-primary" />
             <h3 className="font-bold text-base text-slate-900 dark:text-white truncate max-w-[280px]">
-              {isFolder ? 'Folder Details' : 'Asset Inspector'}
+              Asset Inspector
             </h3>
           </div>
 
@@ -135,8 +124,7 @@ export function AssetDetailsDrawer({
 
           {/* Large Interactive Preview Container */}
           <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center group shadow-inner">
-            {selectedAsset ? (
-              selectedAsset.type === 'video' ? (
+            {selectedAsset.type === 'video' ? (
                 <div className="relative w-full h-full flex items-center justify-center">
                   <img
                     src={selectedAsset.thumbnailUrl}
@@ -174,23 +162,7 @@ export function AssetDetailsDrawer({
                     <Maximize2 className="w-4 h-4" />
                   </a>
                 </div>
-              )
-            ) : (
-              selectedFolder && (
-                <div className="w-full h-full relative overflow-hidden">
-                  <img
-                    src={selectedFolder.coverImage}
-                    alt={selectedFolder.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-2">
-                    <Folder className="w-12 h-12 text-amber-400" />
-                    <span className="font-bold text-lg">{selectedFolder.name}</span>
-                    <span className="text-xs text-slate-300">{selectedFolder.itemCount} contained assets</span>
-                  </div>
-                </div>
-              )
-            )}
+              )}
           </div>
 
           {/* Quick Action Toolbar */}
@@ -232,16 +204,6 @@ export function AssetDetailsDrawer({
               >
                 <Trash2 className="w-4 h-4 mb-1" />
                 <span className="text-[11px] font-semibold">Delete</span>
-              </button>
-            )}
-
-            {selectedAsset && onMoveAsset && (
-              <button
-                onClick={() => onMoveAsset(selectedAsset.id)}
-                className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
-              >
-                <MoveRight className="w-4 h-4 text-indigo-500 mb-1" />
-                <span className="text-[11px] font-semibold">Move</span>
               </button>
             )}
           </div>
@@ -290,14 +252,14 @@ export function AssetDetailsDrawer({
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
                 <span className="text-slate-400 block text-[10px]">File Size</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedAsset ? selectedAsset.size : selectedFolder?.totalSize}
+                  {selectedAsset.size}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
                 <span className="text-slate-400 block text-[10px]">Last Modified</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedAsset ? selectedAsset.updatedAt : selectedFolder?.updatedAt}
+                  {selectedAsset.updatedAt}
                 </span>
               </div>
             </div>

@@ -6,31 +6,26 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/dam/Sidebar';
 import { Header } from '@/components/dam/Header';
 import { StatsOverview } from '@/components/dam/StatsOverview';
-import { FolderSection } from '@/components/dam/FolderSection';
 import { AssetGrid } from '@/components/dam/AssetGrid';
 import { AssetDetailsDrawer } from '@/components/dam/AssetDetailsDrawer';
 import { UploadModal } from '@/components/dam/UploadModal';
 import { CreateImadeoIdModal } from '@/components/dam/CreateImadeoIdModal';
 import { WorkspaceSwitcher } from '@/components/dam/WorkspaceSwitcher';
-import { Breadcrumb } from '@/components/dam/Breadcrumb';
 import { getImadeoIdApi, createImadeoIdApi } from '@/services/imadeoService';
 import { initialStats } from '@/components/dam/mockData';
 import { 
   Asset, 
-  Folder, 
   NavCategory, 
   FilterCategory, 
   SortBy, 
   ViewMode,
   Workspace
 } from '@/components/dam/types';
-import { useWorkspaces, useFolders, useAssets, useMoveAsset, useFolderTree, useCreateFolder } from '@/hooks/useFolders';
+import { useWorkspaces, useAssets } from '@/hooks/useAssets';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Sparkles, FolderOpen, ArrowLeft, Settings as SettingsIcon, Loader2, Layers, Plus } from 'lucide-react';
-import { CreateFolderModal } from '@/components/dam/CreateFolderModal';
+import { CheckCircle2, Sparkles, FolderOpen, Settings as SettingsIcon, Loader2, Layers } from 'lucide-react';
 
 const EMPTY_WORKSPACES: Workspace[] = [];
-const EMPTY_FOLDERS: Folder[] = [];
 const EMPTY_ASSETS: Asset[] = [];
 
 export default function DashboardPage() {
@@ -52,38 +47,23 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  // Tenant and Folder State from URL
+  // Tenant State from URL
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
-  const currentFolderId = searchParams.get('folder') || null;
 
   // React Query Hooks
   const { data: workspaces = EMPTY_WORKSPACES } = useWorkspaces();
-  const { data: fetchedFolders = EMPTY_FOLDERS, isLoading: isLoadingFolders } = useFolders(activeTenantId, currentFolderId);
-  const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId, currentFolderId);
-  const { data: treeFolders = EMPTY_FOLDERS } = useFolderTree(activeTenantId);
-  const moveAssetMut = useMoveAsset();
-  const createFolderMut = useCreateFolder();
+  const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId);
   
-  // For breadcrumbs, we need the path. The easiest way is to use the tree or keep track of the current folder.
-  const currentFolder = useMemo(() => {
-    if (!currentFolderId) return null;
-    return treeFolders.find(f => f.id === currentFolderId) || null;
-  }, [currentFolderId, treeFolders]);
-
   const [assets, setAssets] = useState<Asset[]>([]);
   useEffect(() => {
     setAssets(fetchedAssets);
   }, [fetchedAssets]);
 
-  const folders = fetchedFolders as Folder[];
-
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   // Modals & Notifications
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const triggerToast = (msg: string) => {
@@ -168,48 +148,12 @@ export default function DashboardPage() {
     triggerToast(`Moved "${targetAsset?.name || 'Asset'}" to Trash`);
   };
 
-  const handleMoveAsset = async (assetId: string) => {
-    const targetFolder = prompt('Enter destination folder UUID (or leave blank for root):');
-    if (targetFolder === null) return;
-    try {
-      await moveAssetMut.mutateAsync({ tenantId: activeTenantId, id: assetId, folderId: targetFolder.trim() || null });
-      triggerToast('Asset moved successfully.');
-      if (selectedAsset?.id === assetId) setSelectedAsset(null);
-    } catch (e) {
-      alert('Failed to move asset');
-    }
-  };
-
-  const handleCreateFolder = async (name: string) => {
-    await createFolderMut.mutateAsync({ tenantId: activeTenantId, name, parentId: currentFolderId });
-    triggerToast(`Created folder "${name}"`);
-    setIsCreateFolderOpen(false);
-  };
-
-  const handleSelectFolder = (folder: Folder) => {
-    setSelectedFolder(folder);
-    setSelectedAsset(null);
-  };
-
-  const handleOpenFolder = (folder: Folder) => {
-    router.push(`?ws=${activeTenantId}&folder=${folder.id}`);
-  };
-
-  const handleNavigateBreadcrumb = (folderId: string | null) => {
-    if (folderId) {
-      router.push(`?ws=${activeTenantId}&folder=${folderId}`);
-    } else {
-      router.push(`?ws=${activeTenantId}`);
-    }
-  };
-
   const handleWorkspaceChange = (wsId: string) => {
     router.push(`?ws=${wsId}`);
   };
 
   const handleSelectAsset = (asset: Asset) => {
     setSelectedAsset(asset);
-    setSelectedFolder(null);
   };
 
   const handleShareAsset = (item: Asset | string, e?: React.MouseEvent) => {
@@ -223,7 +167,6 @@ export default function DashboardPage() {
   const handleUploadSuccess = (newAsset: Asset) => {
     setAssets(prev => [newAsset, ...prev]);
     setSelectedAsset(newAsset);
-    setSelectedFolder(null);
     triggerToast(`Successfully uploaded "${newAsset.name}"`);
   };
 
@@ -233,7 +176,6 @@ export default function DashboardPage() {
     switch (activeNav) {
       case 'overview': return 'DAM Overview';
       case 'collections': return 'Asset Collections';
-      case 'folders': return 'Folder Directory';
       case 'shared': return 'Shared with Me';
       case 'recent': return 'Recent Activity';
       case 'favorites': return 'Favorites Library';
@@ -245,18 +187,6 @@ export default function DashboardPage() {
 
   const breadcrumbs = useMemo(() => ['Home', pageTitle], [pageTitle]);
   
-  const currentPathText = useMemo(() => {
-    if (!currentFolder) return 'Media Assets (Root)';
-    
-    const p = [];
-    let curr: Folder | undefined = currentFolder;
-    while (curr) {
-      p.unshift(curr.name);
-      curr = treeFolders.find(f => f.id === curr!.parentId);
-    }
-    return `Media Assets / ${p.join(' / ')}`;
-  }, [currentFolder, treeFolders]);
-
   const filteredAssets = useMemo(() => {
     return assets
       .filter(asset => {
@@ -281,12 +211,6 @@ export default function DashboardPage() {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
   }, [assets, activeTab, activeNav, searchQuery, sortBy]);
-
-  const filteredFolders = useMemo(() => {
-    if (!searchQuery.trim()) return folders;
-    const q = searchQuery.toLowerCase();
-    return folders.filter(f => f.name.toLowerCase().includes(q));
-  }, [folders, searchQuery]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
@@ -326,18 +250,12 @@ export default function DashboardPage() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onOpenUpload={() => setIsUploadOpen(true)}
-            onOpenCreateFolder={() => setIsCreateFolderOpen(true)}
             totalAssetsCount={filteredAssets.length}
           />
 
           <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full">
             
-            <div className="flex items-center justify-between">
-              <Breadcrumb 
-                currentFolder={currentFolder} 
-                folders={folders} 
-                onNavigate={handleNavigateBreadcrumb} 
-              />
+            <div className="flex justify-end">
               {workspaces.length > 0 && (
                 <WorkspaceSwitcher
                   workspaces={workspaces}
@@ -361,15 +279,15 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            ) : folders.length === 0 && assets.length === 0 && !isLoadingFolders && !isLoadingAssets ? (
+            ) : assets.length === 0 && !isLoadingAssets ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-24 h-24 mb-6 relative">
                   <FolderOpen className="w-24 h-24 text-primary opacity-20 absolute inset-0" />
                   <Sparkles className="w-8 h-8 text-primary absolute bottom-0 right-0 animate-pulse" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">This folder is empty</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Your library is empty</h2>
                 <p className="text-slate-500 max-w-md mx-auto mb-8">
-                  Upload files or create a new folder to start organizing your assets.
+                  Upload files to start organizing your assets.
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                   <button
@@ -378,30 +296,11 @@ export default function DashboardPage() {
                   >
                     Upload Assets
                   </button>
-                  <button
-                    onClick={() => setIsCreateFolderOpen(true)}
-                    className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl font-semibold shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-                  >
-                    <FolderOpen className="w-4 h-4" /> Create Folder
-                  </button>
                 </div>
               </div>
             ) : (
               <>
-                {!currentFolderId && <StatsOverview stats={initialStats} />}
-
-                {isLoadingFolders ? (
-                  <div className="flex items-center space-x-2 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading folders...</span></div>
-                ) : (
-                  <FolderSection
-                    folders={filteredFolders}
-                    selectedFolderId={selectedFolder?.id || null}
-                    onSelectFolder={handleSelectFolder}
-                    onOpenFolder={handleOpenFolder}
-                    activeTenantId={activeTenantId}
-                    currentFolderId={currentFolderId}
-                  />
-                )}
+                <StatsOverview stats={initialStats} />
 
                 {isLoadingAssets ? (
                   <div className="flex items-center space-x-2 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading assets...</span></div>
@@ -429,15 +328,12 @@ export default function DashboardPage() {
 
         <AssetDetailsDrawer
           selectedAsset={selectedAsset}
-          selectedFolder={selectedFolder}
           onClose={() => {
             setSelectedAsset(null);
-            setSelectedFolder(null);
           }}
           onToggleFavorite={(id) => handleToggleFavorite(id)}
           onDeleteAsset={handleDeleteAsset}
           onShare={handleShareAsset}
-          onMoveAsset={handleMoveAsset}
         />
 
       </div>
@@ -452,15 +348,6 @@ export default function DashboardPage() {
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={handleUploadSuccess}
         activeTenantId={activeTenantId}
-        currentFolderId={currentFolderId}
-        currentPathText={currentPathText}
-      />
-
-      <CreateFolderModal
-        isOpen={isCreateFolderOpen}
-        onClose={() => setIsCreateFolderOpen(false)}
-        onCreate={handleCreateFolder}
-        currentPathText={currentPathText}
       />
 
       <AnimatePresence>
