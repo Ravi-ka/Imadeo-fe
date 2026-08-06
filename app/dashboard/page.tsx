@@ -21,7 +21,7 @@ import {
   ViewMode,
   Workspace
 } from '@/components/dam/types';
-import { useWorkspaces, useAssets } from '@/hooks/useAssets';
+import { useWorkspaces, useAssets, useDeleteAsset, useRenameAsset, useAssetDownloadUrl } from '@/hooks/useAssets';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Sparkles, FolderOpen, Settings as SettingsIcon, Loader2, Layers } from 'lucide-react';
 
@@ -53,11 +53,17 @@ export default function DashboardPage() {
   // React Query Hooks
   const { data: workspaces = EMPTY_WORKSPACES } = useWorkspaces();
   const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId);
+  const { mutateAsync: deleteAsset } = useDeleteAsset(activeTenantId);
+  const { mutateAsync: renameAsset } = useRenameAsset(activeTenantId);
+  const { mutateAsync: getDownloadUrl } = useAssetDownloadUrl();
   
   const [assets, setAssets] = useState<Asset[]>([]);
   useEffect(() => {
     setAssets(fetchedAssets);
   }, [fetchedAssets]);
+
+  const activeWorkspace = Array.isArray(workspaces) ? workspaces.find(ws => ws.id === activeTenantId) : undefined;
+  const isViewer = activeWorkspace?.role === 'VIEWER';
 
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -141,11 +147,36 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteAsset = (assetId: string) => {
+  const handleDeleteAsset = async (assetId: string) => {
     const targetAsset = assets.find(a => a.id === assetId);
-    setAssets(prev => prev.filter(a => a.id !== assetId));
-    if (selectedAsset?.id === assetId) setSelectedAsset(null);
-    triggerToast(`Moved "${targetAsset?.name || 'Asset'}" to Trash`);
+    try {
+      await deleteAsset(assetId);
+      setAssets(prev => prev.filter(a => a.id !== assetId));
+      if (selectedAsset?.id === assetId) setSelectedAsset(null);
+      triggerToast(`Permanently deleted "${targetAsset?.name || 'Asset'}"`);
+    } catch (e: any) {
+      triggerToast(`Failed to delete asset: ${e.message}`);
+    }
+  };
+
+  const handleRenameAsset = async (assetId: string, newName: string) => {
+    try {
+      await renameAsset({ assetId, name: newName });
+      setAssets(prev => prev.map(a => a.id === assetId ? { ...a, name: newName } : a));
+      if (selectedAsset?.id === assetId) setSelectedAsset(prev => prev ? { ...prev, name: newName } : null);
+      triggerToast(`Successfully renamed to "${newName}"`);
+    } catch (e: any) {
+      triggerToast(`Failed to rename: ${e.message}`);
+    }
+  };
+
+  const handleDownloadAsset = async (assetId: string) => {
+    try {
+      const { downloadUrl } = await getDownloadUrl({ assetId, tenantId: activeTenantId });
+      window.open(downloadUrl, "_blank");
+    } catch (e: any) {
+      triggerToast(`Failed to download: ${e.message}`);
+    }
   };
 
   const handleWorkspaceChange = (wsId: string) => {
@@ -249,14 +280,15 @@ export default function DashboardPage() {
             breadcrumbs={breadcrumbs}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onOpenUpload={() => setIsUploadOpen(true)}
+            onOpenUpload={() => !isViewer && setIsUploadOpen(true)}
             totalAssetsCount={filteredAssets.length}
+            isViewer={isViewer} // Assuming Header accepts this or just hide the button inside
           />
 
           <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full">
             
             <div className="flex justify-end">
-              {workspaces.length > 0 && (
+              {Array.isArray(workspaces) && workspaces.length > 0 && (
                 <WorkspaceSwitcher
                   workspaces={workspaces}
                   activeWorkspaceId={activeTenantId}
@@ -290,12 +322,14 @@ export default function DashboardPage() {
                   Upload files to start organizing your assets.
                 </p>
                 <div className="flex items-center justify-center space-x-4">
-                  <button
-                    onClick={() => setIsUploadOpen(true)}
-                    className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:bg-primary-dark transition-colors"
-                  >
-                    Upload Assets
-                  </button>
+                  {!isViewer && (
+                    <button
+                      onClick={() => setIsUploadOpen(true)}
+                      className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:bg-primary-dark transition-colors"
+                    >
+                      Upload Assets
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -334,6 +368,9 @@ export default function DashboardPage() {
           onToggleFavorite={(id) => handleToggleFavorite(id)}
           onDeleteAsset={handleDeleteAsset}
           onShare={handleShareAsset}
+          onRenameAsset={handleRenameAsset}
+          onDownloadAsset={handleDownloadAsset}
+          isViewer={isViewer}
         />
 
       </div>

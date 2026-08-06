@@ -8,6 +8,22 @@ export type NavCategory =
   | 'trash'
   | 'settings';
 
+export type AssetStatus = "UPLOADING" | "READY" | "FAILED";
+
+export type ApiAsset = {
+  id: string;
+  tenantId: string;
+  userId: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: string;
+  storageKey: string;
+  checksum: string | null;
+  status: AssetStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AssetType = 'image' | 'video' | 'document' | 'design' | 'audio';
 
 export interface Asset {

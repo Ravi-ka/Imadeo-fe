@@ -1,4 +1,4 @@
-const NGROK_BASE_URL = 'https://unfrosted-secret-barista.ngrok-free.dev';
+const BASE_URL = 'https://imadeo-be-dev.up.railway.app';
 
 export interface GetImadeoIdResponse {
   imadeoId?: string | null;
@@ -26,7 +26,6 @@ export async function getImadeoIdApi(token?: string | null): Promise<string | nu
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
     };
@@ -35,7 +34,7 @@ export async function getImadeoIdApi(token?: string | null): Promise<string | nu
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${NGROK_BASE_URL}/api/dashboard/get-imadeo-id`, {
+    const response = await fetch(`${BASE_URL}/api/dashboard/get-imadeo-id`, {
       method: 'GET',
       headers,
       cache: 'no-store',
@@ -80,7 +79,6 @@ export async function createImadeoIdApi(imadeoId: string, token?: string | null)
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     };
 
@@ -88,7 +86,7 @@ export async function createImadeoIdApi(imadeoId: string, token?: string | null)
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${NGROK_BASE_URL}/api/dashboard/create-imadeo-id`, {
+    const response = await fetch(`${BASE_URL}/api/dashboard/create-imadeo-id`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ imadeo_id: imadeoId }),

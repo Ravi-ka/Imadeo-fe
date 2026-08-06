@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Asset } from './types';
 
-import { useAuth } from '@clerk/nextjs';
-import { presignAssetApi, completeAssetUploadApi } from '@/services/assetService';
+import { useUploadAsset } from '@/hooks/useAssets';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -17,99 +16,58 @@ interface UploadModalProps {
   activeTenantId: string;
 }
 
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'video/mp4', 'video/quicktime', 'video/webm',
+  'audio/mpeg', 'audio/wav', 'audio/x-wav',
+  'application/pdf', 'text/plain', 'application/zip'
+];
+
 export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }: UploadModalProps) {
-  const { getToken } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const { user } = useUser();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const { mutateAsync: uploadAsset } = useUploadAsset(activeTenantId);
 
   if (!isOpen) return null;
 
-  const handleSimulatedUpload = async () => {
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+
+    if (selectedFile.size > 104857600) {
+      setErrorMsg('File size must be less than 100MB');
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(selectedFile.type)) {
+      setErrorMsg(`File type ${selectedFile.type || 'unknown'} is not supported`);
+      return;
+    }
+
+    setErrorMsg(null);
     setIsUploading(true);
-    setProgress(10);
+    setProgress(20);
 
-    const uploaderName = user 
-      ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
-      : 'Alex Morgan';
-
-    const uploaderEmail = user?.primaryEmailAddress?.emailAddress || 'alex.m@imadeo.io';
-    const uploaderAvatar = user?.imageUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-
-    // Simulate progress async without interval side effects
-    for (let i = 1; i <= 4; i++) {
-      await new Promise(resolve => setTimeout(resolve, 250));
-      setProgress(10 + i * 22.5); // reaches ~100
-    }
-
-    setProgress(100);
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    // Try to presign (simulated or real depending on backend readiness)
-    let uploadedAsset: Asset | null = null;
     try {
-      const token = await getToken({ skipCache: true });
-      if (token && selectedFile) {
-        const { uploadUrl, assetId } = await presignAssetApi(token, {
-          name: selectedFile.name,
-          mimeType: selectedFile.type || 'application/octet-stream',
-          sizeBytes: selectedFile.size
-        }, activeTenantId);
-        
-        // Upload the actual binary file directly to R2 using the presigned URL
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: selectedFile,
-          headers: {
-            'Content-Type': selectedFile.type || 'application/octet-stream'
-          }
-        });
-
-        if (!uploadRes.ok) {
-          throw new Error('Failed to upload file to storage');
-        }
-
-        // Notify backend that upload is complete to process metadata/save asset
-        const completeRes = await completeAssetUploadApi(token, assetId, activeTenantId);
-        uploadedAsset = completeRes.asset;
-      }
-    } catch (e) {
-      console.warn("Upload failed, falling back to mock data for UI demo", e);
+      setProgress(50);
+      const newAsset = await uploadAsset(selectedFile);
+      setProgress(100);
+      
+      setTimeout(() => {
+        setIsUploading(false);
+        setProgress(0);
+        onUploadSuccess(newAsset);
+        setSelectedFile(null);
+        onClose();
+      }, 500);
+    } catch (e: any) {
+      console.error("Upload failed", e);
+      setErrorMsg(e.message || "Failed to upload asset");
+      setIsUploading(false);
+      setProgress(0);
     }
-
-    // Generate mock uploaded asset if backend failed or returned nothing
-    const fileName = selectedFile?.name || 'Imadeo_Brand_Asset_Upload.png';
-    const ext = fileName.split('.').pop()?.toUpperCase() || 'PNG';
-
-    const newAsset: Asset = uploadedAsset || {
-      id: `asset-${Date.now()}`,
-      name: fileName,
-      type: ext === 'MP4' || ext === 'MOV' ? 'video' : ext === 'PDF' ? 'document' : 'image',
-      extension: ext,
-      size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '3.5 MB',
-      sizeBytes: selectedFile?.size || 3670016,
-      dimensions: '3840 x 2160',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-      updatedAt: 'Just now',
-      createdAt: new Date().toISOString(),
-      owner: {
-        name: uploaderName,
-        avatarUrl: uploaderAvatar,
-        email: uploaderEmail
-      },
-      isFavorite: false,
-      isShared: false,
-      tags: ['New Upload', '2026'],
-      description: 'Newly uploaded media asset processed by Imadeo DAM engine.',
-      path: `/Root/Uploads/${fileName}`
-    };
-
-    setIsUploading(false);
-    setProgress(0);
-    onUploadSuccess(newAsset);
-    setSelectedFile(null);
-    onClose();
   };
 
   return (
@@ -210,13 +168,19 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
             </div>
           )}
 
+          {errorMsg && (
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-red-200 dark:border-red-900/50">
+              {errorMsg}
+            </div>
+          )}
+
           {/* Modal Footer */}
           <div className="flex justify-end space-x-3 pt-2">
             <Button variant="ghost" onClick={onClose} disabled={isUploading}>
               Cancel
             </Button>
             <Button
-              onClick={handleSimulatedUpload}
+              onClick={handleUpload}
               disabled={isUploading}
               className="bg-gradient-to-r from-primary to-secondary text-white"
             >
