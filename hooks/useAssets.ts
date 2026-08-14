@@ -49,6 +49,7 @@ export const useUploadAsset = (tenantId: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     }
   });
 };
@@ -65,6 +66,7 @@ export const useDeleteAsset = (tenantId: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     }
   });
 };

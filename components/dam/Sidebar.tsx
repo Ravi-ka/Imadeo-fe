@@ -26,6 +26,7 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import { useAuthStore } from '@/store/useAuthStore';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWorkspaces } from '@/hooks/useAssets';
 
 interface SidebarProps {
   activeNav: NavCategory;
@@ -61,6 +62,25 @@ export function Sidebar({
   const userAvatar = isLoaded && user?.imageUrl
     ? user.imageUrl
     : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+
+  const { data: workspacesData } = useWorkspaces();
+  const memberships = (workspacesData as any)?.memberships || [];
+  const currentMembership = memberships.find((m: any) => m.tenant.id === activeTenantId) || memberships[0];
+
+  const storageUsedBytes = parseInt(currentMembership?.tenant?.storageUsed || '0', 10);
+  const storageQuotaBytes = parseInt(currentMembership?.tenant?.storageQuota || '5368709120', 10); // 5GB default
+  const storagePercentage = Math.min((storageUsedBytes / storageQuotaBytes) * 100, 100).toFixed(1);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const storageUsedFormatted = formatBytes(storageUsedBytes);
+  const storageQuotaFormatted = formatBytes(storageQuotaBytes);
 
   const navItems: { id: NavCategory; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -181,10 +201,10 @@ export function Sidebar({
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-secondary" /> Storage Plan
             </span>
-            <span>64.2 GB / 100 GB</span>
+            <span>{storageUsedFormatted} / {storageQuotaFormatted}</span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-            <div className="bg-gradient-to-r from-primary to-secondary h-full rounded-full w-[10.2%]" />
+            <div className="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-500 ease-in-out" style={{ width: `${storagePercentage}%` }} />
           </div>
           <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400">
             <span>Free Plan</span>
