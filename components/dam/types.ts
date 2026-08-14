@@ -1,11 +1,11 @@
 export type NavCategory = 
   | 'overview'
   | 'media-assets'
-  | 'collections'
-  | 'shared'
+  | 'image-converter'
+  | 'usage-analytics'
   | 'recent'
   | 'favorites'
-  | 'trash'
+  | 'integrations'
   | 'settings';
 
 export type AssetStatus = "UPLOADING" | "READY" | "FAILED";

@@ -320,8 +320,8 @@ export function AssetGrid({
                     onClick={() => onSelectAsset(asset)}
                     className={`cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-primary/10 dark:bg-primary/20'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-850'
+                        ? 'bg-primary/25 dark:bg-primary/25'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
                     {/* Asset Name & Thumbnail */}

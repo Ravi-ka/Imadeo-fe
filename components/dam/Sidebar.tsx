@@ -17,7 +17,10 @@ import {
   LogOut,
   UserCheck,
   Sparkles,
-  AtSign
+  AtSign,
+  ChartNoAxesCombined,
+  Zap,
+  Images
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -61,12 +64,11 @@ export function Sidebar({
 
   const navItems: { id: NavCategory; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'media-assets', label: 'Media Assets', icon: <ImageIcon className="w-5 h-5" />, badge: '1,482' },
-    { id: 'collections', label: 'Collections', icon: <Boxes className="w-5 h-5" /> },
-    { id: 'shared', label: 'Shared with Me', icon: <Users className="w-5 h-5" /> },
-    { id: 'recent', label: 'Recent Activity', icon: <Clock className="w-5 h-5" /> },
-    { id: 'favorites', label: 'Favorites', icon: <Star className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },
-    { id: 'trash', label: 'Trash / Archive', icon: <Trash2 className="w-5 h-5" /> },
+    { id: 'media-assets', label: 'Media Assets', icon: <Images className="w-5 h-5" />, badge: '1,482' },
+    { id: 'image-converter', label: 'Image Converter', icon: <Boxes className="w-5 h-5" /> },
+    { id: 'usage-analytics', label: 'Usage & Analytics', icon: <ChartNoAxesCombined className="w-5 h-5" /> },
+    { id: 'favorites', label: 'Favorites', icon: <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },
+    { id: 'integrations', label: 'Integrartions', icon: <Zap className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -117,8 +119,8 @@ export function Sidebar({
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5">
         {!isCollapsed && (
-          <div className="px-3 pb-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-            Workspace
+          <div className="px-3 pb-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+            Imadeo Space
           </div>
         )}
 
@@ -182,10 +184,10 @@ export function Sidebar({
             <span>64.2 GB / 100 GB</span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-            <div className="bg-gradient-to-r from-primary to-secondary h-full rounded-full w-[64.2%]" />
+            <div className="bg-gradient-to-r from-primary to-secondary h-full rounded-full w-[10.2%]" />
           </div>
           <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Enterprise Pro</span>
+            <span>Free Plan</span>
             <button className="text-primary hover:underline font-semibold">Upgrade</button>
           </div>
         </div>
