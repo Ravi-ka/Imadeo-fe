@@ -22,6 +22,7 @@ export type ApiAsset = {
   status: AssetStatus;
   createdAt: string;
   updatedAt: string;
+  isFavourite: boolean;
 };
 
 export type AssetType = 'image' | 'video' | 'document' | 'design' | 'audio';

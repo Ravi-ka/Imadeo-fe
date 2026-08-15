@@ -14,7 +14,7 @@ import {
   Workspace
 } from '@/components/dam/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWorkspaces, useAssets, useDeleteAsset, useRenameAsset, useAssetDownloadUrl } from '@/hooks/useAssets';
+import { useWorkspaces, useAssets, useDeleteAsset, useRenameAsset, useAssetDownloadUrl, useToggleFavourite } from '@/hooks/useAssets';
 import { FolderOpen, Sparkles, Loader2, Database, Upload, Share2, FileImage } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore';
 import { useUploadStore } from '@/store/useUploadStore';
@@ -51,9 +51,17 @@ export default function MediaAssetsPage() {
   const { triggerToast } = useToastStore();
   const { openUpload } = useUploadStore();
 
-  const handleToggleFavorite = (assetId: string, e?: React.MouseEvent) => {
+  const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
+
+  const handleToggleFavorite = async (assetId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    queryClient.setQueryData(['assets', activeTenantId], (old: Asset[] | undefined) => {
+    
+    // Find the current asset state
+    const currentAsset = queryClient.getQueryData<Asset[]>(['assets', activeTenantId, undefined])?.find(a => a.id === assetId);
+    const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : false;
+    
+    // Optimistic update
+    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
       if (!old) return [];
       return old.map(asset => {
         if (asset.id === assetId) {
@@ -67,6 +75,31 @@ export default function MediaAssetsPage() {
     
     if (selectedAsset && selectedAsset.id === assetId) {
       setSelectedAsset(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
+    }
+    
+    try {
+      await toggleFavourite({ assetId, isCurrentlyFavourite });
+      // We don't necessarily need to refetch all assets just for a favourite toggle.
+    } catch (e: any) {
+      // Revert optimistic update on failure, ignore if it was a 409 or 404 from double-toggle
+      const isAlreadyStarredError = e.status === 409 && !isCurrentlyFavourite;
+      const isAlreadyUnstarredError = e.status === 404 && isCurrentlyFavourite && e.data?.error === 'Asset is not a favourite';
+      
+      if (!isAlreadyStarredError && !isAlreadyUnstarredError) {
+        triggerToast(`Failed to update favorite status: ${e.message}`);
+        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
+          if (!old) return [];
+          return old.map(asset => {
+            if (asset.id === assetId) {
+              return { ...asset, isFavorite: isCurrentlyFavourite };
+            }
+            return asset;
+          });
+        });
+        if (selectedAsset && selectedAsset.id === assetId) {
+          setSelectedAsset(prev => prev ? { ...prev, isFavorite: isCurrentlyFavourite } : null);
+        }
+      }
     }
   };
 

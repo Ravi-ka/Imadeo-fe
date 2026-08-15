@@ -6,7 +6,8 @@ import {
   uploadAssetDirect,
   deleteAssetApi,
   renameAssetApi,
-  getAssetDownloadUrlApi
+  getAssetDownloadUrlApi,
+  toggleAssetFavouriteApi
 } from '@/services/assetService';
 
 // Workspaces Hook
@@ -23,14 +24,14 @@ export const useWorkspaces = () => {
 };
 
 // Assets Hooks
-export const useAssets = (tenantId: string) => {
+export const useAssets = (tenantId: string, favourite?: boolean) => {
   const { getToken } = useAuth();
   return useQuery({
-    queryKey: ['assets', tenantId],
+    queryKey: ['assets', tenantId, favourite],
     queryFn: async () => {
       const token = await getToken({ skipCache: true });
       if (!token) throw new Error('No token');
-      const res = await getAssetsApi(token, tenantId);
+      const res = await getAssetsApi(token, tenantId, undefined, favourite);
       return res.items; // for now just returning items without infinite scroll
     },
     enabled: !!tenantId,
@@ -95,6 +96,18 @@ export const useAssetDownloadUrl = () => {
       const token = await getToken({ skipCache: true });
       if (!token) throw new Error('No token');
       return getAssetDownloadUrlApi(token, assetId, tenantId);
+    }
+  });
+};
+
+export const useToggleFavourite = (tenantId: string) => {
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ assetId, isCurrentlyFavourite }: { assetId: string, isCurrentlyFavourite: boolean }) => {
+      const token = await getToken({ skipCache: true });
+      if (!token) throw new Error('No token');
+      return toggleAssetFavouriteApi(token, assetId, tenantId, isCurrentlyFavourite);
     }
   });
 };

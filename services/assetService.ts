@@ -75,7 +75,7 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
       email: 'user@imadeo.io'
     },
-    isFavorite: false,
+    isFavorite: apiAsset.isFavourite || false,
     tags: [],
     path: `/Root/${apiAsset.name}`
   };
@@ -84,10 +84,12 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
 export const getAssetsApi = async (
   token: string, 
   tenantId?: string,
-  cursor?: string
+  cursor?: string,
+  favourite?: boolean
 ): Promise<{ items: Asset[], nextCursor: string | null }> => {
   const q = new URLSearchParams({ take: "50" });
   if (cursor) q.append("cursor", cursor);
+  if (favourite !== undefined) q.append("favourite", String(favourite));
   
   const path = `/api/assets?${q}`;
   
@@ -179,3 +181,17 @@ export const uploadAssetDirect = async (
   const { asset } = await completeAssetUploadApi(token, presign.assetId, tenantId);
   return mapBackendAssetToFrontend(asset);
 };
+
+export const toggleAssetFavouriteApi = async (
+  token: string,
+  assetId: string,
+  tenantId?: string,
+  isCurrentlyFavourite?: boolean
+): Promise<any> => {
+  const method = isCurrentlyFavourite ? 'DELETE' : 'POST';
+  return assetsFetch(`/api/assets/${assetId}/favourite`, token, {
+    method,
+    tenantId,
+  });
+};
+

@@ -1,64 +1,30 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/dam/Header';
 import { AssetGrid } from '@/components/dam/AssetGrid';
 import { AssetDetailsDrawer } from '@/components/dam/AssetDetailsDrawer';
 import { Asset, FilterCategory, SortBy, ViewMode } from '@/components/dam/types';
-import { Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useAssets, useToggleFavourite } from '@/hooks/useAssets';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '@/store/useToastStore';
+import { useTenantStore } from '@/store/useTenantStore';
 
-// Mock data for favorites
-const mockFavorites: Asset[] = [
-  {
-    id: 'fav-1',
-    name: 'Hero_Banner_Final.jpg',
-    type: 'image',
-    extension: 'jpg',
-    size: '2.4 MB',
-    sizeBytes: 2400000,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop',
-    updatedAt: new Date().toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    createdAt: new Date().toISOString(),
-    owner: { name: 'Alex M', avatarUrl: '', email: '' },
-    isFavorite: true,
-    tags: ['banner', 'hero', 'final'],
-    path: '/Marketing/Campaigns'
-  },
-  {
-    id: 'fav-2',
-    name: 'Brand_Guidelines_2024.pdf',
-    type: 'document',
-    extension: 'pdf',
-    size: '12 MB',
-    sizeBytes: 12000000,
-    thumbnailUrl: '', // Will use default doc icon
-    updatedAt: new Date(Date.now() - 86400000 * 2).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    owner: { name: 'Sarah J', avatarUrl: '', email: '' },
-    isFavorite: true,
-    tags: ['brand', 'guidelines'],
-    path: '/Brand Assets'
-  },
-  {
-    id: 'fav-3',
-    name: 'Product_Demo_Q3.mp4',
-    type: 'video',
-    extension: 'mp4',
-    size: '145 MB',
-    sizeBytes: 145000000,
-    thumbnailUrl: '', // Will use default video icon
-    updatedAt: new Date(Date.now() - 86400000 * 5).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    owner: { name: 'Mike T', avatarUrl: '', email: '' },
-    isFavorite: true,
-    tags: ['product', 'demo', 'video'],
-    path: '/Product/Videos'
-  }
-];
+const EMPTY_ASSETS: Asset[] = [];
 
 export default function FavoritesPage() {
-  const [assets, setAssets] = useState<Asset[]>(mockFavorites);
+  const searchParams = useSearchParams();
+  const { imadeoId } = useTenantStore();
+  const activeTenantId = searchParams.get('ws') || imadeoId || '';
+
+  // React Query Hooks
+  const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId, true);
+  const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
+  const queryClient = useQueryClient();
+  const { triggerToast } = useToastStore();
   
   // Navigation & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,12 +35,53 @@ export default function FavoritesPage() {
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
-  const handleToggleFavorite = (assetId: string, e?: React.MouseEvent) => {
+  const handleToggleFavorite = async (assetId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    // For this mock page, removing from favorites removes it from the list entirely
-    setAssets(prev => prev.filter(a => a.id !== assetId));
+    
+    // Find the current asset state
+    const currentAsset = queryClient.getQueryData<Asset[]>(['assets', activeTenantId, true])?.find(a => a.id === assetId);
+    const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : true; // In favourites tab, it's mostly true initially
+
+    // Optimistically remove from favorites list
+    queryClient.setQueryData(['assets', activeTenantId, true], (old: Asset[] | undefined) => {
+      if (!old) return [];
+      return old.filter(asset => asset.id !== assetId);
+    });
+    
     if (selectedAsset && selectedAsset.id === assetId) {
       setSelectedAsset(null);
+    }
+    
+    // Also update main assets cache if it exists to keep in sync
+    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
+      if (!old) return old;
+      return old.map(asset => asset.id === assetId ? { ...asset, isFavorite: !isCurrentlyFavourite } : asset);
+    });
+
+    triggerToast(`Removed from Favorites`);
+
+    try {
+      await toggleFavourite({ assetId, isCurrentlyFavourite });
+    } catch (e: any) {
+      // Rollback
+      const isAlreadyUnstarredError = e.status === 404 && isCurrentlyFavourite && e.data?.error === 'Asset is not a favourite';
+      if (!isAlreadyUnstarredError) {
+        triggerToast(`Failed to update favorite status: ${e.message}`);
+        
+        // Re-add to favorites list
+        if (currentAsset) {
+          queryClient.setQueryData(['assets', activeTenantId, true], (old: Asset[] | undefined) => {
+            if (!old) return [currentAsset];
+            return [...old, currentAsset]; // simple append
+          });
+        }
+
+        // Revert main assets cache
+        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
+          if (!old) return old;
+          return old.map(asset => asset.id === assetId ? { ...asset, isFavorite: isCurrentlyFavourite } : asset);
+        });
+      }
     }
   };
 
@@ -83,7 +90,7 @@ export default function FavoritesPage() {
   };
 
   const filteredAssets = useMemo(() => {
-    return assets
+    return fetchedAssets
       .filter(asset => {
         if (activeTab !== 'all') {
           if (asset.type !== activeTab) return false;
@@ -102,7 +109,7 @@ export default function FavoritesPage() {
         if (sortBy === 'type') return a.extension.localeCompare(b.extension);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [assets, activeTab, searchQuery, sortBy]);
+  }, [fetchedAssets, activeTab, searchQuery, sortBy]);
 
   return (
     <>
@@ -123,7 +130,9 @@ export default function FavoritesPage() {
           <p className="text-slate-500">Quickly access your most important and frequently used assets.</p>
         </div>
 
-        {assets.length === 0 ? (
+        {isLoadingAssets ? (
+          <div className="flex items-center space-x-2 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading favorites...</span></div>
+        ) : fetchedAssets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="w-24 h-24 mb-6 relative">
               <Sparkles className="w-24 h-24 text-amber-400 opacity-20 absolute inset-0" />

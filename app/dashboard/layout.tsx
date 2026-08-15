@@ -13,6 +13,7 @@ import { useTenantStore } from '@/store/useTenantStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, Layers } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAssets } from '@/hooks/useAssets';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -27,6 +28,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
+
+  const { data: favouriteAssets } = useAssets(activeTenantId, true);
+  const favoritesCount = favouriteAssets?.length || 0;
 
   const { message: toastMessage, triggerToast } = useToastStore();
   const { isUploadOpen, closeUpload } = useUploadStore();
@@ -102,7 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onSelectNav={() => {}} // Will be ignored
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          favoritesCount={0} // We will mock this or handle in Sidebar
+          favoritesCount={favoritesCount}
           imadeoId={imadeoId}
           activeTenantId={activeTenantId}
         />
