@@ -62,7 +62,13 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
     size: sizeStr,
     sizeBytes,
     thumbnailUrl,
-    updatedAt: new Date(apiAsset.updatedAt).toLocaleDateString(),
+    updatedAt: new Date(apiAsset.updatedAt).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
     createdAt: apiAsset.createdAt,
     owner: {
       name: 'System User', // mock since we only have userId

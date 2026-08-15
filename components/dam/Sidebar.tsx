@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   Layers, 
   LayoutDashboard, 
@@ -29,8 +31,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaces } from '@/hooks/useAssets';
 
 interface SidebarProps {
-  activeNav: NavCategory;
-  onSelectNav: (category: NavCategory) => void;
+  activeNav?: NavCategory;
+  onSelectNav?: (category: NavCategory) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   favoritesCount: number;
@@ -39,8 +41,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ 
-  activeNav, 
-  onSelectNav, 
   isCollapsed, 
   onToggleCollapse,
   favoritesCount,
@@ -50,6 +50,7 @@ export function Sidebar({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isLoaded } = useUser();
   const { signOut, openUserProfile } = useClerk();
+  const pathname = usePathname();
 
   const userName = isLoaded && user
     ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
@@ -82,14 +83,14 @@ export function Sidebar({
   const storageUsedFormatted = formatBytes(storageUsedBytes);
   const storageQuotaFormatted = formatBytes(storageQuotaBytes);
 
-  const navItems: { id: NavCategory; label: string; icon: React.ReactNode; badge?: string | number }[] = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'media-assets', label: 'Media Assets', icon: <Images className="w-5 h-5" />, badge: '1,482' },
-    { id: 'image-converter', label: 'Image Converter', icon: <Boxes className="w-5 h-5" /> },
-    { id: 'usage-analytics', label: 'Usage & Analytics', icon: <ChartNoAxesCombined className="w-5 h-5" /> },
-    { id: 'favorites', label: 'Favorites', icon: <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },
-    { id: 'integrations', label: 'Integrartions', icon: <Zap className="w-5 h-5" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
+  const navItems = [
+    { href: '/dashboard/overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { href: '/dashboard/media-assets', label: 'Media Assets', icon: <Images className="w-5 h-5" />, badge: '1,482' },
+    { href: '/dashboard/image-converter', label: 'Image Converter', icon: <Boxes className="w-5 h-5" /> },
+    { href: '/dashboard/usage-analytics', label: 'Usage & Analytics', icon: <ChartNoAxesCombined className="w-5 h-5" /> },
+    { href: '/dashboard/favorites', label: 'Favorites', icon: <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },
+    { href: '/dashboard/integrations', label: 'Integrations', icon: <Zap className="w-5 h-5" /> },
+    { href: '/dashboard/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
@@ -145,38 +146,39 @@ export function Sidebar({
         )}
 
         {navItems.map((item) => {
-          const isActive = activeNav === item.id;
+          const isActive = pathname === item.href;
           return (
-            <div key={item.id} className="relative group">
-              <button
-                onClick={() => onSelectNav(item.id)}
-                className={`w-full flex items-center h-11 rounded-xl px-3 text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-primary text-white shadow-lg shadow-primary/25 font-semibold'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/80 hover:text-slate-900 dark:hover:text-white'
-                } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
-              >
-                <div className="flex items-center space-x-3 overflow-hidden">
-                  <span className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary dark:group-hover:text-primary-light'}`}>
-                    {item.icon}
-                  </span>
-                  {!isCollapsed && (
-                    <span className="truncate">{item.label}</span>
-                  )}
-                </div>
+            <div key={item.href} className="relative group">
+              <Link href={item.href}>
+                <button
+                  className={`w-full flex items-center h-11 rounded-xl px-3 text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary text-white shadow-lg shadow-primary/25 font-semibold'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/80 hover:text-slate-900 dark:hover:text-white'
+                  } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
+                >
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    <span className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-primary dark:group-hover:text-primary-light'}`}>
+                      {item.icon}
+                    </span>
+                    {!isCollapsed && (
+                      <span className="truncate">{item.label}</span>
+                    )}
+                  </div>
 
-                {!isCollapsed && item.badge !== undefined && (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
+                  {!isCollapsed && item.badge !== undefined && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              </Link>
 
               {/* Tooltip for collapsed sidebar */}
               {isCollapsed && (
@@ -262,20 +264,14 @@ export function Sidebar({
                 <p className="text-[11px] font-mono text-primary font-semibold">@{imadeoId || 'no_id_set'}</p>
                 <p className="text-[11px] text-slate-400 truncate">{userEmail}</p>
               </div>
-              <button 
-                onClick={() => {
-                  setShowUserMenu(false);
-                  if (openUserProfile) {
-                    openUserProfile();
-                  } else {
-                    onSelectNav('settings');
-                  }
-                }}
-                className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                <UserCheck className="w-4 h-4 text-primary" />
-                <span>Account Profile</span>
-              </button>
+              <Link href="/dashboard/settings" onClick={() => setShowUserMenu(false)}>
+                <button 
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <UserCheck className="w-4 h-4 text-primary" />
+                  <span>Account Profile</span>
+                </button>
+              </Link>
               <button 
                 onClick={() => {
                   setShowUserMenu(false);

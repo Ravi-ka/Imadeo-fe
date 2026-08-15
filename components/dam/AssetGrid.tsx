@@ -259,13 +259,13 @@ export function AssetGrid({
                     <h3 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-primary dark:group-hover:text-primary-light transition-colors" title={asset.name}>
                       {asset.name}
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                      <span>{asset.size}</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        {asset.updatedAt}
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                      <span className="whitespace-nowrap font-medium">{asset.size}</span>
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{asset.updatedAt}</span>
                       </span>
-                    </p>
+                    </div>
                   </div>
 
                   {/* Owner & Options Row */}

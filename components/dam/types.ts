@@ -48,7 +48,7 @@ export interface Asset {
   isShared?: boolean;
   tags: string[];
   description?: string;
-  path: string;
+  path?: string;
 }
 
 
