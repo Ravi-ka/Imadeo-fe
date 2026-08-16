@@ -268,30 +268,6 @@ export function AssetGrid({
                     </div>
                   </div>
 
-                  {/* Owner & Options Row */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-                    <div className="flex items-center space-x-1.5" title={`Owner: ${asset.owner.name}`}>
-                      <img
-                        src={asset.owner.avatarUrl}
-                        alt={asset.owner.name}
-                        className="w-5 h-5 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                      />
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[80px]">
-                        {asset.owner.name.split(' ')[0]}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShareAsset(asset, e);
-                      }}
-                      title="Share link"
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
               </motion.div>
             );
@@ -306,7 +282,6 @@ export function AssetGrid({
                 <th className="py-3 px-4">Asset</th>
                 <th className="py-3 px-4">Type</th>
                 <th className="py-3 px-4">Size</th>
-                <th className="py-3 px-4">Owner</th>
                 <th className="py-3 px-4">Last Modified</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -343,7 +318,6 @@ export function AssetGrid({
                           <p className="font-semibold text-slate-900 dark:text-white hover:text-primary">
                             {asset.name}
                           </p>
-                          <p className="text-[11px] text-slate-400 line-clamp-1">{asset.path}</p>
                         </div>
                       </div>
                     </td>
@@ -360,17 +334,7 @@ export function AssetGrid({
                       {asset.size}
                     </td>
 
-                    {/* Owner */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <img
-                          src={asset.owner.avatarUrl}
-                          alt={asset.owner.name}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{asset.owner.name}</span>
-                      </div>
-                    </td>
+
 
                     {/* Last Modified */}
                     <td className="py-3 px-4 text-slate-500">

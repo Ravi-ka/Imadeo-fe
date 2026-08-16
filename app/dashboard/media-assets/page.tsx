@@ -146,6 +146,31 @@ export default function MediaAssetsPage() {
     triggerToast(`Share link copied for "${itemName}"`);
   };
 
+  const memberships = (workspaces as any)?.memberships || [];
+  const currentMembership = memberships.find((m: any) => m.tenant?.id === activeTenantId) || memberships[0];
+  const storageUsedBytes = parseInt(currentMembership?.tenant?.storageUsed || '0', 10);
+  
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+  
+  const storageUsedFormatted = formatBytes(storageUsedBytes);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    fetchedAssets.forEach(asset => {
+      if (asset.extension) {
+        const ext = asset.extension.toLowerCase();
+        counts[ext] = (counts[ext] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [fetchedAssets]);
+
   const filteredAssets = useMemo(() => {
     return fetchedAssets
       .filter(asset => {
@@ -196,7 +221,7 @@ export default function MediaAssetsPage() {
           )}
         </div>
 
-        {/* 4 Summary Cards */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
@@ -207,31 +232,30 @@ export default function MediaAssetsPage() {
               <FileImage className="w-5 h-5" />
             </div>
           </div>
+
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500 font-medium mb-1 flex items-center gap-2">Storage Used <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Placeholder</span></p>
-              <h3 className="text-2xl font-bold">1.2 GB</h3>
+              <p className="text-sm text-slate-500 font-medium mb-1">Storage Used</p>
+              <h3 className="text-2xl font-bold">{storageUsedFormatted}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
               <Database className="w-5 h-5" />
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500 font-medium mb-1 flex items-center gap-2">Shared Assets <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Placeholder</span></p>
-              <h3 className="text-2xl font-bold">45</h3>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-              <Share2 className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500 font-medium mb-1 flex items-center gap-2">Recent Uploads <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">Placeholder</span></p>
-              <h3 className="text-2xl font-bold">12</h3>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
-              <Upload className="w-5 h-5" />
+
+          <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center min-h-[90px]">
+            <p className="text-sm text-slate-500 font-medium mb-2">Asset Types</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(typeCounts).length > 0 ? (
+                Object.entries(typeCounts).map(([ext, count]) => (
+                  <div key={ext} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
+                    <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{ext}</span>
+                    <span className="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded-md text-slate-500 font-bold">{count}</span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-sm text-slate-400">No assets yet</span>
+              )}
             </div>
           </div>
         </div>
