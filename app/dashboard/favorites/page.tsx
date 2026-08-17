@@ -9,6 +9,7 @@ import { Asset, FilterCategory, SortBy, ViewMode } from '@/components/dam/types'
 import { Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAssets, useToggleFavourite } from '@/hooks/useAssets';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToastStore } from '@/store/useToastStore';
 import { useTenantStore } from '@/store/useTenantStore';
@@ -20,17 +21,37 @@ export default function FavoritesPage() {
   const { imadeoId } = useTenantStore();
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
 
-  // React Query Hooks
-  const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId, true);
-  const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
-  const queryClient = useQueryClient();
-  const { triggerToast } = useToastStore();
-  
   // Navigation & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterCategory>('all');
   const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const filters = useMemo(() => ({
+    favourite: true,
+    type: activeTab !== 'all' ? activeTab : undefined,
+    search: debouncedSearch || undefined,
+    status: 'READY'
+  }), [activeTab, debouncedSearch]);
+
+  // React Query Hooks
+  const { 
+    data: assetsData, 
+    isLoading: isLoadingAssets,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useAssets(activeTenantId, filters);
+
+  const fetchedAssets = useMemo(() => {
+    if (!assetsData) return EMPTY_ASSETS;
+    return assetsData.pages.flatMap(page => page.items);
+  }, [assetsData]);
+  const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
+  const queryClient = useQueryClient();
+  const { triggerToast } = useToastStore();
 
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -39,13 +60,19 @@ export default function FavoritesPage() {
     if (e) e.stopPropagation();
     
     // Find the current asset state
-    const currentAsset = queryClient.getQueryData<Asset[]>(['assets', activeTenantId, true])?.find(a => a.id === assetId);
+    const currentAsset = fetchedAssets.find(a => a.id === assetId);
     const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : true; // In favourites tab, it's mostly true initially
 
     // Optimistically remove from favorites list
-    queryClient.setQueryData(['assets', activeTenantId, true], (old: Asset[] | undefined) => {
-      if (!old) return [];
-      return old.filter(asset => asset.id !== assetId);
+    queryClient.setQueryData(['assets', activeTenantId, true], (old: any) => {
+      if (!old || !old.pages) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          items: page.items.filter((asset: Asset) => asset.id !== assetId)
+        }))
+      };
     });
     
     if (selectedAsset && selectedAsset.id === assetId) {
@@ -53,9 +80,20 @@ export default function FavoritesPage() {
     }
     
     // Also update main assets cache if it exists to keep in sync
-    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
-      if (!old) return old;
-      return old.map(asset => asset.id === assetId ? { ...asset, isFavorite: !isCurrentlyFavourite } : asset);
+    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+      if (!old || !old.pages) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          items: page.items.map((asset: Asset) => {
+            if (asset.id === assetId) {
+              return { ...asset, isFavorite: !isCurrentlyFavourite };
+            }
+            return asset;
+          })
+        }))
+      };
     });
 
     triggerToast(`Removed from Favorites`);
@@ -70,16 +108,35 @@ export default function FavoritesPage() {
         
         // Re-add to favorites list
         if (currentAsset) {
-          queryClient.setQueryData(['assets', activeTenantId, true], (old: Asset[] | undefined) => {
-            if (!old) return [currentAsset];
-            return [...old, currentAsset]; // simple append
+          queryClient.setQueryData(['assets', activeTenantId, true], (old: any) => {
+            if (!old || !old.pages || old.pages.length === 0) return old;
+            
+            const firstPage = old.pages[0];
+            return {
+              ...old,
+              pages: [
+                { ...firstPage, items: [currentAsset, ...firstPage.items] },
+                ...old.pages.slice(1)
+              ]
+            };
           });
         }
 
         // Revert main assets cache
-        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
-          if (!old) return old;
-          return old.map(asset => asset.id === assetId ? { ...asset, isFavorite: isCurrentlyFavourite } : asset);
+        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+          if (!old || !old.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              items: page.items.map((asset: Asset) => {
+                if (asset.id === assetId) {
+                  return { ...asset, isFavorite: isCurrentlyFavourite };
+                }
+                return asset;
+              })
+            }))
+          };
         });
       }
     }
@@ -90,26 +147,14 @@ export default function FavoritesPage() {
   };
 
   const filteredAssets = useMemo(() => {
-    return fetchedAssets
-      .filter(asset => {
-        if (activeTab !== 'all') {
-          if (asset.type !== activeTab) return false;
-        }
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchName = asset.name.toLowerCase().includes(q);
-          const matchExt = asset.extension.toLowerCase().includes(q);
-          return matchName || matchExt;
-        }
-        return true;
-      })
+    return [...fetchedAssets]
       .sort((a, b) => {
         if (sortBy === 'name') return a.name.localeCompare(b.name);
         if (sortBy === 'size') return b.sizeBytes - a.sizeBytes;
         if (sortBy === 'type') return a.extension.localeCompare(b.extension);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [fetchedAssets, activeTab, searchQuery, sortBy]);
+  }, [fetchedAssets, sortBy]);
 
   return (
     <>
@@ -164,6 +209,9 @@ export default function FavoritesPage() {
             onViewModeChange={setViewMode}
             searchQuery={searchQuery}
             onShareAsset={() => {}} // mock
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
           />
         )}
       </div>

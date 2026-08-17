@@ -35,7 +35,6 @@ interface SidebarProps {
   onSelectNav?: (category: NavCategory) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  favoritesCount: number;
   imadeoId?: string | null;
   activeTenantId?: string;
 }
@@ -43,7 +42,6 @@ interface SidebarProps {
 export function Sidebar({ 
   isCollapsed, 
   onToggleCollapse,
-  favoritesCount,
   imadeoId,
   activeTenantId
 }: SidebarProps) {
@@ -85,10 +83,9 @@ export function Sidebar({
 
   const navItems = [
     { href: '/dashboard/overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { href: '/dashboard/media-assets', label: 'Media Assets', icon: <Images className="w-5 h-5" />, badge: '1,482' },
+    { href: '/dashboard/media-assets', label: 'Media Assets', icon: <Images className="w-5 h-5" /> },
     { href: '/dashboard/image-converter', label: 'Image Converter', icon: <Boxes className="w-5 h-5" /> },
     { href: '/dashboard/usage-analytics', label: 'Usage & Analytics', icon: <ChartNoAxesCombined className="w-5 h-5" /> },
-    { href: '/dashboard/favorites', label: 'Favorites', icon: <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />, badge: favoritesCount > 0 ? favoritesCount : undefined },
     { href: '/dashboard/integrations', label: 'Integrations', icon: <Zap className="w-5 h-5" /> },
     { href: '/dashboard/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
@@ -165,18 +162,6 @@ export function Sidebar({
                       <span className="truncate">{item.label}</span>
                     )}
                   </div>
-
-                  {!isCollapsed && item.badge !== undefined && (
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               </Link>
 
@@ -184,11 +169,6 @@ export function Sidebar({
               {isCollapsed && (
                 <div className="fixed left-20 ml-2 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xl border border-slate-700 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
                   {item.label}
-                  {item.badge !== undefined && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary text-[10px]">
-                      {item.badge}
-                    </span>
-                  )}
                 </div>
               )}
             </div>

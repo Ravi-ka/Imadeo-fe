@@ -29,9 +29,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
 
-  const { data: favouriteAssets } = useAssets(activeTenantId, true);
-  const favoritesCount = favouriteAssets?.length || 0;
-
   const { message: toastMessage, triggerToast } = useToastStore();
   const { isUploadOpen, closeUpload } = useUploadStore();
 
@@ -106,7 +103,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onSelectNav={() => {}} // Will be ignored
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          favoritesCount={favoritesCount}
           imadeoId={imadeoId}
           activeTenantId={activeTenantId}
         />

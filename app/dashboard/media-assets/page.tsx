@@ -15,6 +15,7 @@ import {
 } from '@/components/dam/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWorkspaces, useAssets, useDeleteAsset, useRenameAsset, useAssetDownloadUrl, useToggleFavourite } from '@/hooks/useAssets';
+import { useDebounce } from '@/hooks/useDebounce';
 import { FolderOpen, Sparkles, Loader2, Database, Upload, Share2, FileImage } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore';
 import { useUploadStore } from '@/store/useUploadStore';
@@ -28,9 +29,31 @@ export default function MediaAssetsPage() {
   const { imadeoId } = useTenantStore();
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<FilterCategory>('all');
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const filters = useMemo(() => ({
+    favourite: activeTab === 'favorites' ? true : undefined,
+    type: activeTab !== 'all' && activeTab !== 'favorites' ? activeTab : undefined,
+    search: debouncedSearch || undefined,
+    status: 'READY'
+  }), [activeTab, debouncedSearch]);
+
   // React Query Hooks
   const { data: workspaces = EMPTY_WORKSPACES } = useWorkspaces();
-  const { data: fetchedAssets = EMPTY_ASSETS, isLoading: isLoadingAssets } = useAssets(activeTenantId);
+  const { 
+    data: assetsData, 
+    isLoading: isLoadingAssets,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useAssets(activeTenantId, filters);
+
+  const fetchedAssets = useMemo(() => {
+    if (!assetsData) return EMPTY_ASSETS;
+    return assetsData.pages.flatMap(page => page.items);
+  }, [assetsData]);
   const { mutateAsync: deleteAsset } = useDeleteAsset(activeTenantId);
   const { mutateAsync: renameAsset } = useRenameAsset(activeTenantId);
   const { mutateAsync: getDownloadUrl } = useAssetDownloadUrl();
@@ -40,8 +63,6 @@ export default function MediaAssetsPage() {
   const isViewer = activeWorkspace?.role === 'VIEWER';
 
   // Navigation & Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<FilterCategory>('all');
   const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
@@ -57,20 +78,26 @@ export default function MediaAssetsPage() {
     if (e) e.stopPropagation();
     
     // Find the current asset state
-    const currentAsset = queryClient.getQueryData<Asset[]>(['assets', activeTenantId, undefined])?.find(a => a.id === assetId);
+    const currentAsset = fetchedAssets.find(a => a.id === assetId);
     const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : false;
     
     // Optimistic update
-    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
-      if (!old) return [];
-      return old.map(asset => {
-        if (asset.id === assetId) {
-          const updatedState = !asset.isFavorite;
-          triggerToast(updatedState ? `Added "${asset.name}" to Favorites` : `Removed "${asset.name}" from Favorites`);
-          return { ...asset, isFavorite: updatedState };
-        }
-        return asset;
-      });
+    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+      if (!old || !old.pages) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          items: page.items.map((asset: Asset) => {
+            if (asset.id === assetId) {
+              const updatedState = !asset.isFavorite;
+              triggerToast(updatedState ? `Added "${asset.name}" to Favorites` : `Removed "${asset.name}" from Favorites`);
+              return { ...asset, isFavorite: updatedState };
+            }
+            return asset;
+          })
+        }))
+      };
     });
     
     if (selectedAsset && selectedAsset.id === assetId) {
@@ -87,14 +114,20 @@ export default function MediaAssetsPage() {
       
       if (!isAlreadyStarredError && !isAlreadyUnstarredError) {
         triggerToast(`Failed to update favorite status: ${e.message}`);
-        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: Asset[] | undefined) => {
-          if (!old) return [];
-          return old.map(asset => {
-            if (asset.id === assetId) {
-              return { ...asset, isFavorite: isCurrentlyFavourite };
-            }
-            return asset;
-          });
+        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+          if (!old || !old.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              items: page.items.map((asset: Asset) => {
+                if (asset.id === assetId) {
+                  return { ...asset, isFavorite: isCurrentlyFavourite };
+                }
+                return asset;
+              })
+            }))
+          };
         });
         if (selectedAsset && selectedAsset.id === assetId) {
           setSelectedAsset(prev => prev ? { ...prev, isFavorite: isCurrentlyFavourite } : null);
@@ -172,28 +205,14 @@ export default function MediaAssetsPage() {
   }, [fetchedAssets]);
 
   const filteredAssets = useMemo(() => {
-    return fetchedAssets
-      .filter(asset => {
-        if (activeTab === 'favorites') {
-          if (!asset.isFavorite) return false;
-        } else if (activeTab !== 'all') {
-          if (asset.type !== activeTab) return false;
-        }
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchName = asset.name.toLowerCase().includes(q);
-          const matchExt = asset.extension.toLowerCase().includes(q);
-          return matchName || matchExt;
-        }
-        return true;
-      })
+    return [...fetchedAssets]
       .sort((a, b) => {
         if (sortBy === 'name') return a.name.localeCompare(b.name);
         if (sortBy === 'size') return b.sizeBytes - a.sizeBytes;
         if (sortBy === 'type') return a.extension.localeCompare(b.extension);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [fetchedAssets, activeTab, searchQuery, sortBy]);
+  }, [fetchedAssets, sortBy]);
 
   return (
     <>
@@ -260,48 +279,32 @@ export default function MediaAssetsPage() {
           </div>
         </div>
 
-        {fetchedAssets.length === 0 && !isLoadingAssets ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="w-24 h-24 mb-6 relative">
-              <FolderOpen className="w-24 h-24 text-primary opacity-20 absolute inset-0" />
-              <Sparkles className="w-8 h-8 text-primary absolute bottom-0 right-0 animate-pulse" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Your library is empty</h2>
-            <p className="text-slate-500 max-w-md mx-auto mb-8">
-              Upload files to start organizing your assets.
-            </p>
-            <div className="flex items-center justify-center space-x-4">
-              {!isViewer && (
-                <button
-                  onClick={openUpload}
-                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:bg-primary-dark transition-colors"
-                >
-                  Upload Assets
-                </button>
-              )}
-            </div>
+        {isLoadingAssets && fetchedAssets.length === 0 ? (
+          <div className="flex items-center justify-center py-24 space-x-2 text-sm text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading assets...</span>
           </div>
         ) : (
-          <>
-            {isLoadingAssets ? (
-              <div className="flex items-center space-x-2 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading assets...</span></div>
-            ) : (
-              <AssetGrid
-                assets={filteredAssets}
-                selectedAssetId={selectedAsset?.id || null}
-                onSelectAsset={handleSelectAsset}
-                onToggleFavorite={handleToggleFavorite}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                searchQuery={searchQuery}
-                onShareAsset={(asset, e) => handleShareAsset(asset, e)}
-              />
-            )}
-          </>
+          <AssetGrid
+            assets={filteredAssets}
+            selectedAssetId={selectedAsset?.id || null}
+            onSelectAsset={handleSelectAsset}
+            onToggleFavorite={handleToggleFavorite}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            searchQuery={searchQuery}
+            onShareAsset={(asset, e) => handleShareAsset(asset, e)}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isEmptyLibrary={fetchedAssets.length === 0 && activeTab === 'all' && !searchQuery.trim()}
+            onOpenUpload={openUpload}
+            isViewer={isViewer}
+          />
         )}
       </div>
 

@@ -85,18 +85,28 @@ export const getAssetsApi = async (
   token: string, 
   tenantId?: string,
   cursor?: string,
-  favourite?: boolean
+  filters?: {
+    favourite?: boolean;
+    type?: string;
+    search?: string;
+    status?: string;
+  },
+  take: number = 20
 ): Promise<{ items: Asset[], nextCursor: string | null }> => {
-  const q = new URLSearchParams({ take: "50" });
+  const q = new URLSearchParams({ take: take.toString() });
   if (cursor) q.append("cursor", cursor);
-  if (favourite !== undefined) q.append("favourite", String(favourite));
+  
+  if (filters?.favourite) q.append("favourite", "true");
+  if (filters?.type) q.append("type", filters.type);
+  if (filters?.search) q.append("search", filters.search);
+  if (filters?.status) q.append("status", filters.status);
   
   const path = `/api/assets?${q}`;
   
   const res = await assetsFetch<{ items: ApiAsset[], nextCursor: string | null }>(path, token, { tenantId });
   
   return {
-    items: (res.items || []).filter(a => a.status === 'READY').map(mapBackendAssetToFrontend),
+    items: (res.items || []).map(mapBackendAssetToFrontend),
     nextCursor: res.nextCursor
   };
 };

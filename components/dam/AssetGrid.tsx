@@ -17,7 +17,9 @@ import {
   Clock,
   ArrowUpDown,
   Filter,
-  Check
+  Check,
+  FolderOpen,
+  Sparkles
 } from 'lucide-react';
 import { Asset, FilterCategory, SortBy, ViewMode } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +37,12 @@ interface AssetGridProps {
   onViewModeChange: (mode: ViewMode) => void;
   searchQuery: string;
   onShareAsset: (asset: Asset, e: React.MouseEvent) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  isEmptyLibrary?: boolean;
+  onOpenUpload?: () => void;
+  isViewer?: boolean;
 }
 
 export function AssetGrid({
@@ -49,9 +57,40 @@ export function AssetGrid({
   viewMode,
   onViewModeChange,
   searchQuery,
-  onShareAsset
+  onShareAsset,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  isEmptyLibrary,
+  onOpenUpload,
+  isViewer
 }: AssetGridProps) {
   const [activeMenuAssetId, setActiveMenuAssetId] = useState<string | null>(null);
+  const loadMoreRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || !fetchNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const tabs: { id: FilterCategory; label: string }[] = [
     { id: 'all', label: 'All Assets' },
@@ -174,25 +213,48 @@ export function AssetGrid({
 
       {/* No Search Results or Empty State */}
       {assets.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-16 px-4 bg-white/50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-center space-y-4"
-        >
-          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-            <SearchX className="w-8 h-8" />
-          </div>
-          <div className="space-y-1 max-w-sm">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              No matching assets found
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {searchQuery
-                ? `No files match your query "${searchQuery}". Try searching for something else or clearing filters.`
-                : 'There are no files available under this category.'}
+        isEmptyLibrary ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center bg-white/50 dark:bg-slate-900/40 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 shadow-sm">
+            <div className="w-24 h-24 mb-6 relative">
+              <FolderOpen className="w-24 h-24 text-primary opacity-20 absolute inset-0" />
+              <Sparkles className="w-8 h-8 text-primary absolute bottom-0 right-0 animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Your library is empty</h2>
+            <p className="text-slate-500 max-w-md mx-auto mb-8">
+              Upload files to start organizing your assets.
             </p>
+            <div className="flex items-center justify-center space-x-4">
+              {!isViewer && onOpenUpload && (
+                <button
+                  onClick={onOpenUpload}
+                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:bg-primary-dark transition-colors"
+                >
+                  Upload Assets
+                </button>
+              )}
+            </div>
           </div>
-        </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 px-4 bg-white/50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-center space-y-4"
+          >
+            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+              <SearchX className="w-8 h-8" />
+            </div>
+            <div className="space-y-1 max-w-sm">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                No matching assets found
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {searchQuery
+                  ? `No files match your query "${searchQuery}". Try searching for something else or clearing filters.`
+                  : 'There are no files available under this category.'}
+              </p>
+            </div>
+          </motion.div>
+        )
       ) : viewMode === 'grid' ? (
         /* Grid View Layout */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -368,6 +430,27 @@ export function AssetGrid({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Intersection Observer Target */}
+      {(hasNextPage || isFetchingNextPage) && (
+        <div 
+          ref={loadMoreRef} 
+          className="flex justify-center items-center py-6"
+        >
+          {isFetchingNextPage ? (
+            <div className="flex items-center space-x-2 text-sm text-slate-400">
+              <Check className="w-4 h-4 animate-spin" style={{ display: 'none' }} />
+              <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Loading more assets...</span>
+            </div>
+          ) : (
+            <div className="h-10"></div> // Invisible spacer to trigger observer
+          )}
         </div>
       )}
     </section>

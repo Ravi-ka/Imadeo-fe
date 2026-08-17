@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { getWorkspacesApi } from '@/services/workspaceService';
 import { 
@@ -24,16 +24,18 @@ export const useWorkspaces = () => {
 };
 
 // Assets Hooks
-export const useAssets = (tenantId: string, favourite?: boolean) => {
+export const useAssets = (tenantId: string, filters?: { favourite?: boolean; type?: string; search?: string; status?: string }, take: number = 20) => {
   const { getToken } = useAuth();
-  return useQuery({
-    queryKey: ['assets', tenantId, favourite],
-    queryFn: async () => {
+  return useInfiniteQuery({
+    queryKey: ['assets', tenantId, filters],
+    queryFn: async ({ pageParam = undefined }: { pageParam?: string }) => {
       const token = await getToken({ skipCache: true });
       if (!token) throw new Error('No token');
-      const res = await getAssetsApi(token, tenantId, undefined, favourite);
-      return res.items; // for now just returning items without infinite scroll
+      const res = await getAssetsApi(token, tenantId, pageParam, filters, take);
+      return res; 
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    initialPageParam: undefined as string | undefined,
     enabled: !!tenantId,
   });
 };
