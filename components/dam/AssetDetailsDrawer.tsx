@@ -231,7 +231,7 @@ export function AssetDetailsDrawer({
               )}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+            {/* <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
               <span className="truncate max-w-[280px] font-mono text-[11px]">{path}</span>
               <button
                 onClick={handleCopyPath}
@@ -240,7 +240,7 @@ export function AssetDetailsDrawer({
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Metadata Specifications Grid */}
@@ -281,7 +281,7 @@ export function AssetDetailsDrawer({
           </div>
 
           {/* Owner Profile */}
-          {selectedAsset && (
+          {/* {selectedAsset && (
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <img
@@ -298,10 +298,10 @@ export function AssetDetailsDrawer({
                 Owner
               </span>
             </div>
-          )}
+          )} */}
 
           {/* Tags & Categories */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <TagIcon className="w-3.5 h-3.5" /> Tags & Keywords
@@ -333,10 +333,10 @@ export function AssetDetailsDrawer({
               placeholder="Add tag (Press Enter)..."
               className="w-full mt-2 px-3 py-1.5 bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
             />
-          </div>
+          </div> */}
 
           {/* Description Field */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 Description
@@ -363,7 +363,7 @@ export function AssetDetailsDrawer({
                 {descriptionText || 'No description provided for this asset.'}
               </p>
             )}
-          </div>
+          </div> */}
 
         </div>
       </motion.aside>

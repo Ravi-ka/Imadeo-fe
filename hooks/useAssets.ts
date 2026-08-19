@@ -104,12 +104,16 @@ export const useAssetDownloadUrl = () => {
 
 export const useToggleFavourite = (tenantId: string) => {
   const { getToken } = useAuth();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ assetId, isCurrentlyFavourite }: { assetId: string, isCurrentlyFavourite: boolean }) => {
       const token = await getToken({ skipCache: true });
       if (!token) throw new Error('No token');
       return toggleAssetFavouriteApi(token, assetId, tenantId, isCurrentlyFavourite);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
     }
   });
 };

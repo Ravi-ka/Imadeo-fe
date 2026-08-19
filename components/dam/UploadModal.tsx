@@ -31,6 +31,12 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
 
   const { mutateAsync: uploadAsset } = useUploadAsset(activeTenantId);
 
+  const handleClose = () => {
+    setSelectedFile(null);
+    setErrorMsg(null);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const handleUpload = async () => {
@@ -59,8 +65,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
         setIsUploading(false);
         setProgress(0);
         onUploadSuccess(newAsset);
-        setSelectedFile(null);
-        onClose();
+        handleClose();
       }, 500);
     } catch (e: any) {
       console.error("Upload failed", e);
@@ -79,7 +84,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* Modal Window */}
@@ -103,7 +108,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X className="w-5 h-5" />
@@ -176,7 +181,7 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
 
           {/* Modal Footer */}
           <div className="flex justify-end space-x-3 pt-2">
-            <Button variant="ghost" onClick={onClose} disabled={isUploading}>
+            <Button variant="ghost" onClick={handleClose} disabled={isUploading}>
               Cancel
             </Button>
             <Button

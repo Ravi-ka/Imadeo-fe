@@ -67,7 +67,7 @@ export function Sidebar({
   const currentMembership = memberships.find((m: any) => m.tenant.id === activeTenantId) || memberships[0];
 
   const storageUsedBytes = parseInt(currentMembership?.tenant?.storageUsed || '0', 10);
-  const storageQuotaBytes = parseInt(currentMembership?.tenant?.storageQuota || '5368709120', 10); // 5GB default
+  const storageQuotaBytes = parseInt(currentMembership?.tenant?.storageQuota || '2147483648', 10); // 2GB default
   const storagePercentage = Math.min((storageUsedBytes / storageQuotaBytes) * 100, 100).toFixed(1);
 
   const formatBytes = (bytes: number) => {
@@ -80,6 +80,7 @@ export function Sidebar({
 
   const storageUsedFormatted = formatBytes(storageUsedBytes);
   const storageQuotaFormatted = formatBytes(storageQuotaBytes);
+  const subscriptionPlan = currentMembership?.tenant?.plan || "Free";
 
   const navItems = [
     { href: '/dashboard/overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -189,7 +190,7 @@ export function Sidebar({
             <div className="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-500 ease-in-out" style={{ width: `${storagePercentage}%` }} />
           </div>
           <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Free Plan</span>
+            <span>{subscriptionPlan} Plan</span>
             <button className="text-primary hover:underline font-semibold">Upgrade</button>
           </div>
         </div>

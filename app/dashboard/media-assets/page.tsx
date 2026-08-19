@@ -81,8 +81,8 @@ export default function MediaAssetsPage() {
     const currentAsset = fetchedAssets.find(a => a.id === assetId);
     const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : false;
     
-    // Optimistic update
-    queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+    // Optimistic update for ALL queries (flips the flag)
+    queryClient.setQueriesData({ queryKey: ['assets', activeTenantId] }, (old: any) => {
       if (!old || !old.pages) return old;
       return {
         ...old,
@@ -90,8 +90,7 @@ export default function MediaAssetsPage() {
           ...page,
           items: page.items.map((asset: Asset) => {
             if (asset.id === assetId) {
-              const updatedState = !asset.isFavorite;
-              triggerToast(updatedState ? `Added "${asset.name}" to Favorites` : `Removed "${asset.name}" from Favorites`);
+              const updatedState = !isCurrentlyFavourite;
               return { ...asset, isFavorite: updatedState };
             }
             return asset;
@@ -99,6 +98,42 @@ export default function MediaAssetsPage() {
         }))
       };
     });
+    
+    // Explicitly add/remove from the dedicated "Favorites" tab cache (favourite: true, no other filters)
+    const favoritesCacheKey = { favourite: true, type: undefined, search: undefined, status: 'READY' };
+    
+    if (!isCurrentlyFavourite && currentAsset) {
+      // Adding favorite: inject it into the first page of the favorites cache if it exists
+      queryClient.setQueryData(['assets', activeTenantId, favoritesCacheKey], (old: any) => {
+        if (!old || !old.pages || old.pages.length === 0) return old;
+        const firstPage = old.pages[0];
+        // Ensure it isn't already there
+        if (firstPage.items.some((a: Asset) => a.id === assetId)) return old;
+        
+        return {
+          ...old,
+          pages: [
+            { ...firstPage, items: [{ ...currentAsset, isFavorite: true }, ...firstPage.items] },
+            ...old.pages.slice(1)
+          ]
+        };
+      });
+    } else if (isCurrentlyFavourite) {
+      // Removing favorite: remove it from the favorites cache completely
+      queryClient.setQueryData(['assets', activeTenantId, favoritesCacheKey], (old: any) => {
+        if (!old || !old.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.filter((a: Asset) => a.id !== assetId)
+          }))
+        };
+      });
+    }
+    
+    // Toast should only trigger once, not inside the setQueriesData map loop
+    triggerToast(!isCurrentlyFavourite ? `Added "${currentAsset?.name || 'Asset'}" to Favorites` : `Removed "${currentAsset?.name || 'Asset'}" from Favorites`);
     
     if (selectedAsset && selectedAsset.id === assetId) {
       setSelectedAsset(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
@@ -114,7 +149,7 @@ export default function MediaAssetsPage() {
       
       if (!isAlreadyStarredError && !isAlreadyUnstarredError) {
         triggerToast(`Failed to update favorite status: ${e.message}`);
-        queryClient.setQueryData(['assets', activeTenantId, undefined], (old: any) => {
+        queryClient.setQueriesData({ queryKey: ['assets', activeTenantId] }, (old: any) => {
           if (!old || !old.pages) return old;
           return {
             ...old,
