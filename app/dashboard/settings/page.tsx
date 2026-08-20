@@ -15,7 +15,7 @@ export default function SettingsPage() {
     const fetchId = async () => {
       if (!isLoaded) return;
       try {
-        const token = await getToken({ skipCache: true });
+        const token = await getToken();
         const fetchedId = await getImadeoIdApi(token);
         if (isMounted && fetchedId) {
           setImadeoId(fetchedId);

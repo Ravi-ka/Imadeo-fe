@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  allowedDevOrigins:["https://imadeo-be-dev.up.railway.app"],
+  allowedDevOrigins:["https://api-dev.imadeo.in"],
   images: {
     remotePatterns: [
       {

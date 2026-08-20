@@ -1,4 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://imadeo-be-dev.up.railway.app';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.imadeo.in';
 
 import { Workspace } from '@/components/dam/types';
 

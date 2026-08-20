@@ -1,4 +1,4 @@
-const BASE_URL = 'https://imadeo-be-dev.up.railway.app';
+const BASE_URL = 'https://api-dev.imadeo.in';
 
 export interface GetImadeoIdResponse {
   imadeoId?: string | null;

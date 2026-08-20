@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       if (isMounted) setIsCheckingImadeoId(true);
       try {
-        const token = await getToken({ skipCache: true });
+        const token = await getToken();
         const fetchedId = await getImadeoIdApi(token);
         if (!isMounted) return;
         if (fetchedId) {
@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [isAuthLoaded, userId, user?.id, getToken]);
 
   const handleCreateImadeoId = async (newId: string) => {
-    const token = await getToken({ skipCache: true });
+    const token = await getToken();
     await createImadeoIdApi(newId, token);
     setImadeoId(newId);
     setShowCreateImadeoModal(false);
