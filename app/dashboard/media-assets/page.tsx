@@ -54,6 +54,11 @@ export default function MediaAssetsPage() {
     if (!assetsData) return EMPTY_ASSETS;
     return assetsData.pages.flatMap(page => page.items);
   }, [assetsData]);
+
+  const firstPage = assetsData?.pages?.[0];
+  const totalAssetsCountAPI = firstPage?.totalAssetsCount;
+  const countByAssetTypeAPI = firstPage?.countByAssetType;
+
   const { mutateAsync: deleteAsset } = useDeleteAsset(activeTenantId);
   const { mutateAsync: renameAsset } = useRenameAsset(activeTenantId);
   const { mutateAsync: getDownloadUrl } = useAssetDownloadUrl();
@@ -229,6 +234,17 @@ export default function MediaAssetsPage() {
   const storageUsedFormatted = formatBytes(storageUsedBytes);
 
   const typeCounts = useMemo(() => {
+    if (countByAssetTypeAPI && countByAssetTypeAPI.length > 0) {
+      const counts: Record<string, number> = {};
+      countByAssetTypeAPI.forEach(item => {
+        const ext = item.mimeType.split('/')[1] || item.mimeType;
+        // Group jpeg/jpg together if needed, but keeping it as from mimeType is fine
+        const extName = ext.toLowerCase();
+        counts[extName] = (counts[extName] || 0) + item._count;
+      });
+      return counts;
+    }
+
     const counts: Record<string, number> = {};
     fetchedAssets.forEach(asset => {
       if (asset.extension) {
@@ -237,7 +253,7 @@ export default function MediaAssetsPage() {
       }
     });
     return counts;
-  }, [fetchedAssets]);
+  }, [fetchedAssets, countByAssetTypeAPI]);
 
   const filteredAssets = useMemo(() => {
     return [...fetchedAssets]
@@ -257,7 +273,7 @@ export default function MediaAssetsPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenUpload={() => !isViewer && openUpload()}
-        totalAssetsCount={filteredAssets.length}
+        totalAssetsCount={totalAssetsCountAPI ?? filteredAssets.length}
         isViewer={isViewer}
       />
 
@@ -280,7 +296,7 @@ export default function MediaAssetsPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500 font-medium mb-1">Total Assets</p>
-              <h3 className="text-2xl font-bold">{isLoadingAssets ? <Loader2 className="w-5 h-5 animate-spin" /> : fetchedAssets.length}</h3>
+              <h3 className="text-2xl font-bold">{isLoadingAssets ? <Loader2 className="w-5 h-5 animate-spin" /> : (totalAssetsCountAPI ?? fetchedAssets.length)}</h3>
             </div>
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <FileImage className="w-5 h-5" />

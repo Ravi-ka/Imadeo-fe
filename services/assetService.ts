@@ -92,7 +92,12 @@ export const getAssetsApi = async (
     status?: string;
   },
   take: number = 20
-): Promise<{ items: Asset[], nextCursor: string | null }> => {
+): Promise<{ 
+  items: Asset[], 
+  nextCursor: string | null,
+  totalAssetsCount?: number,
+  countByAssetType?: { _count: number, mimeType: string }[] 
+}> => {
   const q = new URLSearchParams({ take: take.toString() });
   if (cursor) q.append("cursor", cursor);
   
@@ -103,11 +108,18 @@ export const getAssetsApi = async (
   
   const path = `/api/assets?${q}`;
   
-  const res = await assetsFetch<{ items: ApiAsset[], nextCursor: string | null }>(path, token, { tenantId });
+  const res = await assetsFetch<{ 
+    items: ApiAsset[], 
+    nextCursor: string | null,
+    totalAssetsCount?: number,
+    countByAssetType?: { _count: number, mimeType: string }[] 
+  }>(path, token, { tenantId });
   
   return {
     items: (res.items || []).map(mapBackendAssetToFrontend),
-    nextCursor: res.nextCursor
+    nextCursor: res.nextCursor,
+    totalAssetsCount: res.totalAssetsCount,
+    countByAssetType: res.countByAssetType
   };
 };
 

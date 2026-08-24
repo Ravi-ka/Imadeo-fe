@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/dam/Sidebar';
@@ -32,24 +32,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { message: toastMessage, triggerToast } = useToastStore();
   const { isUploadOpen, closeUpload } = useUploadStore();
 
+  const fetchedForUserId = useRef<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
     const checkImadeoIdStatus = async () => {
       if (!isAuthLoaded) return;
+      
       const activeUserId = userId || user?.id;
+      
       if (!activeUserId) {
         if (isMounted) {
           setImadeoId(null);
           setShowCreateImadeoModal(false);
           setIsCheckingImadeoId(false);
+          fetchedForUserId.current = null;
         }
         return;
       }
+
+      // Prevent duplicate fetches for the same user (e.g., due to Strict Mode or dependency changes)
+      if (fetchedForUserId.current === activeUserId) return;
+      fetchedForUserId.current = activeUserId;
+
       if (isMounted) setIsCheckingImadeoId(true);
       try {
         const token = await getToken();
         const fetchedId = await getImadeoIdApi(token);
         if (!isMounted) return;
+        
         if (fetchedId) {
           setImadeoId(fetchedId);
           setShowCreateImadeoModal(false);
@@ -62,6 +73,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         console.warn('Backend Imadeo ID check error:', err?.message);
         setImadeoId(null);
         setShowCreateImadeoModal(true);
+        // Reset the ref on failure so it can be retried if dependencies change
+        fetchedForUserId.current = null;
       } finally {
         if (isMounted) setIsCheckingImadeoId(false);
       }

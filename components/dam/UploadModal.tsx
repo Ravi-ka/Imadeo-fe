@@ -17,7 +17,7 @@ interface UploadModalProps {
 }
 
 const ALLOWED_MIME_TYPES = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/jpeg','image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
   'video/mp4', 'video/quicktime', 'video/webm',
   'audio/mpeg', 'audio/wav', 'audio/x-wav',
   'application/pdf', 'text/plain', 'application/zip'
