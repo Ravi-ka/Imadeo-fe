@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import { useUIStore } from '@/store/useAuthStore';
 import { ReactQueryProvider } from '@/services/queryClient';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 export default function RootLayout({
@@ -36,6 +37,7 @@ export default function RootLayout({
             <div className="relative z-10 flex flex-col min-h-screen">
               {children}
             </div>
+            <Toaster />
           </ReactQueryProvider>
         </body>
       </html>

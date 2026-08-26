@@ -11,8 +11,8 @@ import Link from 'next/link';
 import { useAssets, useToggleFavourite } from '@/hooks/useAssets';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToastStore } from '@/store/useToastStore';
 import { useTenantStore } from '@/store/useTenantStore';
+import { toast } from 'sonner';
 
 const EMPTY_ASSETS: Asset[] = [];
 
@@ -51,7 +51,6 @@ export default function FavoritesPage() {
   }, [assetsData]);
   const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
   const queryClient = useQueryClient();
-  const { triggerToast } = useToastStore();
 
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -133,7 +132,7 @@ export default function FavoritesPage() {
       }
     }
 
-    triggerToast(
+    toast.success(
       isCurrentlyFavourite
         ? `Removed "${currentAsset.name}" from Favorites`
         : `Added "${currentAsset.name}" to Favorites`
@@ -145,7 +144,7 @@ export default function FavoritesPage() {
       // Rollback
       const isAlreadyUnstarredError = e.status === 404 && isCurrentlyFavourite && e.data?.error === 'Asset is not a favourite';
       if (!isAlreadyUnstarredError) {
-        triggerToast(`Failed to update favorite status: ${e.message}`);
+        toast.error(`Failed to update favorite status: ${e.message}`);
         
         // Revert ALL asset caches
         queryClient.setQueriesData({ queryKey: ['assets', activeTenantId] }, (old: any) => {

@@ -17,8 +17,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useWorkspaces, useAssets, useDeleteAsset, useRenameAsset, useAssetDownloadUrl, useToggleFavourite } from '@/hooks/useAssets';
 import { useDebounce } from '@/hooks/useDebounce';
 import { FolderOpen, Sparkles, Loader2, Database, Upload, Share2, FileImage } from 'lucide-react';
-import { useToastStore } from '@/store/useToastStore';
 import { useUploadStore } from '@/store/useUploadStore';
+import { toast } from 'sonner';
 import { useTenantStore } from '@/store/useTenantStore';
 
 const EMPTY_WORKSPACES: Workspace[] = [];
@@ -74,7 +74,6 @@ export default function MediaAssetsPage() {
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
-  const { triggerToast } = useToastStore();
   const { openUpload } = useUploadStore();
 
   const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
@@ -151,7 +150,7 @@ export default function MediaAssetsPage() {
     }
     
     // Toast should only trigger once, not inside the setQueriesData map loop
-    triggerToast(!isCurrentlyFavourite ? `Added "${currentAsset?.name || 'Asset'}" to Favorites` : `Removed "${currentAsset?.name || 'Asset'}" from Favorites`);
+    toast.success(!isCurrentlyFavourite ? `Added "${currentAsset?.name || 'Asset'}" to Favorites` : `Removed "${currentAsset?.name || 'Asset'}" from Favorites`);
     
     if (selectedAsset && selectedAsset.id === assetId) {
       setSelectedAsset(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
@@ -166,7 +165,7 @@ export default function MediaAssetsPage() {
       const isAlreadyUnstarredError = e.status === 404 && isCurrentlyFavourite && e.data?.error === 'Asset is not a favourite';
       
       if (!isAlreadyStarredError && !isAlreadyUnstarredError) {
-        triggerToast(`Failed to update favorite status: ${e.message}`);
+        toast.error(`Failed to update favorite status: ${e.message}`);
         queryClient.setQueriesData({ queryKey: ['assets', activeTenantId] }, (old: any) => {
           if (!old || !old.pages) return old;
           return {
@@ -195,9 +194,9 @@ export default function MediaAssetsPage() {
       await deleteAsset(assetId);
       // useDeleteAsset already invalidates the query on success
       if (selectedAsset?.id === assetId) setSelectedAsset(null);
-      triggerToast(`Permanently deleted "${targetAsset?.name || 'Asset'}"`);
+      toast.success(`Permanently deleted "${targetAsset?.name || 'Asset'}"`);
     } catch (e: any) {
-      triggerToast(`Failed to delete asset: ${e.message}`);
+      toast.error(`Failed to delete asset: ${e.message}`);
     }
   };
 
@@ -206,9 +205,9 @@ export default function MediaAssetsPage() {
       await renameAsset({ assetId, name: newName });
       // useRenameAsset already invalidates the query on success
       if (selectedAsset?.id === assetId) setSelectedAsset(prev => prev ? { ...prev, name: newName } : null);
-      triggerToast(`Successfully renamed to "${newName}"`);
+      toast.success(`Successfully renamed to "${newName}"`);
     } catch (e: any) {
-      triggerToast(`Failed to rename: ${e.message}`);
+      toast.error(`Failed to rename: ${e.message}`);
     }
   };
 
@@ -217,7 +216,7 @@ export default function MediaAssetsPage() {
       const { downloadUrl } = await getDownloadUrl({ assetId, tenantId: activeTenantId });
       window.open(downloadUrl, "_blank");
     } catch (e: any) {
-      triggerToast(`Failed to download: ${e.message}`);
+      toast.error(`Failed to download: ${e.message}`);
     }
   };
 
@@ -229,7 +228,7 @@ export default function MediaAssetsPage() {
     if (e) e.stopPropagation();
     const itemName = typeof item === 'string' ? item : item.name;
     navigator.clipboard.writeText(`https://imadeo.io/share/${Date.now()}`);
-    triggerToast(`Share link copied for "${itemName}"`);
+    toast.success(`Share link copied for "${itemName}"`);
   };
 
   const memberships = (workspaces as any)?.memberships || [];

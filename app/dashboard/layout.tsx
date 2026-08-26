@@ -7,12 +7,11 @@ import { Sidebar } from '@/components/dam/Sidebar';
 import { CreateImadeoIdModal } from '@/components/dam/CreateImadeoIdModal';
 import { UploadModal } from '@/components/dam/UploadModal';
 import { getImadeoIdApi, createImadeoIdApi } from '@/services/imadeoService';
-import { useToastStore } from '@/store/useToastStore';
 import { useUploadStore } from '@/store/useUploadStore';
 import { useTenantStore } from '@/store/useTenantStore';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { toast } from 'sonner';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -26,7 +25,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
 
-  const { message: toastMessage, triggerToast } = useToastStore();
   const { isUploadOpen, closeUpload } = useUploadStore();
 
   const fetchedForUserId = useRef<string | null>(null);
@@ -85,11 +83,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     await createImadeoIdApi(newId, token);
     setImadeoId(newId);
     setShowCreateImadeoModal(false);
-    triggerToast(`Imadeo ID "@${newId}" successfully created! Welcome to your DAM Dashboard.`);
+    toast.success(`Imadeo ID "@${newId}" successfully created! Welcome to your DAM Dashboard.`);
   };
 
   const handleUploadSuccess = () => {
-    triggerToast(`Successfully uploaded assets`);
+    toast.success(`Successfully uploaded assets`);
   };
 
   return (
@@ -136,20 +134,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onUploadSuccess={handleUploadSuccess}
         activeTenantId={activeTenantId}
       />
-
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xl flex items-center space-x-3 text-sm font-semibold border border-slate-700/50"
-          >
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 dark:text-emerald-600 shrink-0" />
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
