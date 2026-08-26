@@ -64,7 +64,7 @@ export function Sidebar({
 
   const { data: workspacesData } = useWorkspaces();
   const memberships = (workspacesData as any)?.memberships || [];
-  const currentMembership = memberships.find((m: any) => m.tenant.id === activeTenantId) || memberships[0];
+  const currentMembership = memberships.find((m: any) => m.tenant?.id === activeTenantId) || memberships[0];
 
   const storageUsedBytes = parseInt(currentMembership?.tenant?.storageUsed || '0', 10);
   const storageQuotaBytes = parseInt(currentMembership?.tenant?.storageQuota || '2147483648', 10); // 2GB default

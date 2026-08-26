@@ -17,7 +17,7 @@ import {
   User, 
   Calendar, 
   HardDrive, 
-  Maximize2,
+  Loader2,
   MoveRight,
   ExternalLink,
   Layers,
@@ -57,14 +57,43 @@ export function AssetDetailsDrawer({
   const [newTagInput, setNewTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(selectedAsset?.tags || ['Brand', 'Imadeo', '2026']);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(true);
+  const previewImgRef = React.useRef<HTMLImageElement>(null);
 
-  // Sync state on prop changes
+  const previewImageUrl =
+    selectedAsset?.previewUrl || selectedAsset?.thumbnailUrl;
+  const isBlobSrc = (url?: string) => Boolean(url?.startsWith('blob:'));
+  const previewSrc =
+    selectedAsset?.type === 'video'
+      ? (isBlobSrc(selectedAsset.previewUrl) ? selectedAsset.previewUrl : selectedAsset.thumbnailUrl)
+      : previewImageUrl;
+  const isProcessingPreview = Boolean(selectedAsset?.isProcessingPreview);
+
+  const handlePreviewLoaded = () => setIsPreviewLoading(false);
+
   React.useEffect(() => {
-    if (selectedAsset) {
-      setDescriptionText(selectedAsset.description || '');
-      setTags(selectedAsset.tags || []);
+    if (!selectedAsset) return;
+    setDescriptionText(selectedAsset.description || '');
+    setTags(selectedAsset.tags || []);
+  }, [selectedAsset?.id, selectedAsset?.description]);
+
+  React.useEffect(() => {
+    setIsPlayingVideo(false);
+  }, [selectedAsset?.id]);
+
+  // Only restart the preview spinner when the actual media source changes
+  // (favorite toggles replace selectedAsset but keep the same URL).
+  React.useEffect(() => {
+    setIsPreviewLoading(Boolean(previewSrc) || Boolean(selectedAsset?.isProcessingPreview));
+  }, [previewSrc, selectedAsset?.id]);
+
+  React.useEffect(() => {
+    if (!isPreviewLoading) return;
+    const img = previewImgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setIsPreviewLoading(false);
     }
-  }, [selectedAsset]);
+  }, [isPreviewLoading, previewSrc, selectedAsset?.id]);
 
   if (!selectedAsset) return null;
 
@@ -129,14 +158,67 @@ export function AssetDetailsDrawer({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* Large Interactive Preview Container */}
-          <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center group shadow-inner">
+          <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-inner">
+            <AnimatePresence>
+              {isPreviewLoading && previewSrc && (
+                <motion.div
+                  key="preview-loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-slate-900" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-slate-900 to-secondary/15 animate-pulse" />
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-primary/25 blur-2xl animate-pulse" />
+                    <div className="absolute bottom-1/4 right-1/4 w-40 h-40 rounded-full bg-secondary/20 blur-2xl animate-pulse [animation-delay:700ms]" />
+                  </div>
+                  <div className="relative flex flex-col items-center gap-3">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl animate-pulse" />
+                      <Loader2 className="relative w-9 h-9 text-primary animate-spin" />
+                    </div>
+                    <span className="text-xs font-medium text-slate-400 tracking-wide">
+                      Loading preview…
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {selectedAsset.type === 'video' ? (
                 <div className="relative w-full h-full flex items-center justify-center">
-                  <img
-                    src={selectedAsset.thumbnailUrl}
-                    alt={selectedAsset.name}
-                    className="w-full h-full object-cover"
-                  />
+                  {previewSrc?.startsWith('blob:') ? (
+                    <video
+                      src={previewSrc}
+                      muted
+                      playsInline
+                      onLoadedData={handlePreviewLoaded}
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        isPreviewLoading ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    />
+                  ) : previewSrc ? (
+                    <img
+                      ref={previewImgRef}
+                      src={previewSrc}
+                      alt={selectedAsset.name}
+                      onLoad={handlePreviewLoaded}
+                      onError={handlePreviewLoaded}
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        isPreviewLoading ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                      <Play className="w-8 h-8" />
+                      {isProcessingPreview && (
+                        <span className="text-xs">Generating preview…</span>
+                      )}
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <button
                       onClick={() => setIsPlayingVideo(!isPlayingVideo)}
@@ -151,22 +233,23 @@ export function AssetDetailsDrawer({
                     </span>
                   )}
                 </div>
+              ) : previewImageUrl ? (
+                <img
+                  ref={previewImgRef}
+                  src={previewImageUrl}
+                  alt={selectedAsset.name}
+                  onLoad={handlePreviewLoaded}
+                  onError={handlePreviewLoaded}
+                  className={`w-full h-full object-contain p-2 transition-opacity duration-300 ${
+                    isPreviewLoading ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
               ) : (
-                <div className="relative w-full h-full">
-                  <img
-                    src={selectedAsset.thumbnailUrl}
-                    alt={selectedAsset.name}
-                    className="w-full h-full object-contain p-2"
-                  />
-                  <a
-                    href={selectedAsset.thumbnailUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="absolute top-3 right-3 p-2 rounded-xl bg-black/60 backdrop-blur-md text-white border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Open Fullscreen Preview"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </a>
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <FileText className="w-8 h-8" />
+                  {isProcessingPreview && (
+                    <span className="text-xs">Generating preview…</span>
+                  )}
                 </div>
               )}
           </div>

@@ -1,14 +1,106 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { InfiniteData, QueryClient, useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { getWorkspacesApi } from '@/services/workspaceService';
+import { Asset } from '@/components/dam/types';
 import { 
   getAssetsApi, 
   uploadAssetDirect,
   deleteAssetApi,
   renameAssetApi,
   getAssetDownloadUrlApi,
-  toggleAssetFavouriteApi
+  toggleAssetFavouriteApi,
+  pollAssetUntilThumbnails,
+  startThumbnailPollController,
+  stopThumbnailPoll,
+  clearLocalPreview,
+  markLocalPreviewSettled,
+  hasRemoteAssetUrl,
 } from '@/services/assetService';
+
+type AssetListFilters = { favourite?: boolean; type?: string; search?: string; status?: string };
+
+type AssetsPage = {
+  items: Asset[];
+  nextCursor: string | null;
+  totalAssetsCount?: number;
+  countByAssetType?: { _count: number; mimeType: string }[];
+};
+
+type AssetsInfiniteData = InfiniteData<AssetsPage, string | undefined>;
+
+const assetMatchesListFilters = (asset: Asset, filters?: AssetListFilters): boolean => {
+  if (!filters) return true;
+  if (filters.favourite && !asset.isFavorite) return false;
+  if (filters.type && asset.type !== filters.type) return false;
+  if (filters.search && !asset.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+  if (filters.status && asset.status && asset.status !== filters.status) return false;
+  return true;
+};
+
+const mergeAssetRecord = (cached: Asset, incoming: Asset): Asset => {
+  const remoteReady = hasRemoteAssetUrl(incoming.thumbnailUrl);
+  return {
+    ...cached,
+    ...incoming,
+    thumbnailUrl: remoteReady ? incoming.thumbnailUrl : (cached.thumbnailUrl || incoming.thumbnailUrl),
+    previewUrl: hasRemoteAssetUrl(incoming.previewUrl)
+      ? incoming.previewUrl
+      : (cached.previewUrl || incoming.previewUrl),
+    localPreviewUrl: remoteReady ? undefined : (incoming.localPreviewUrl || cached.localPreviewUrl),
+    isProcessingPreview: remoteReady ? false : (incoming.isProcessingPreview ?? cached.isProcessingPreview),
+  };
+};
+
+const upsertAssetInAssetsCache = (
+  queryClient: QueryClient,
+  tenantId: string,
+  asset: Asset,
+  options: { insertIfMissing?: boolean } = {}
+) => {
+  const queries = queryClient.getQueriesData<AssetsInfiniteData>({ queryKey: ['assets', tenantId] });
+
+  for (const [queryKey, data] of queries) {
+    if (!data?.pages) continue;
+    const filters = queryKey[2] as AssetListFilters | undefined;
+    const exists = data.pages.some((page) => page.items.some((item) => item.id === asset.id));
+    if (!exists && !options.insertIfMissing) continue;
+    if (!exists && !assetMatchesListFilters(asset, filters)) continue;
+
+    queryClient.setQueryData<AssetsInfiniteData>(queryKey, (old) => {
+      if (!old?.pages) return old;
+      if (old.pages.some((page) => page.items.some((item) => item.id === asset.id))) {
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) => (item.id === asset.id ? mergeAssetRecord(item, asset) : item)),
+          })),
+        };
+      }
+
+      if (old.pages.length === 0) {
+        return {
+          pages: [{ items: [asset], nextCursor: null, totalAssetsCount: 1 }],
+          pageParams: [undefined],
+        };
+      }
+
+      const [first, ...rest] = old.pages;
+      return {
+        ...old,
+        pages: [
+          {
+            ...first,
+            items: [asset, ...first.items],
+            totalAssetsCount:
+              typeof first.totalAssetsCount === 'number' ? first.totalAssetsCount + 1 : first.totalAssetsCount,
+          },
+          ...rest,
+        ],
+      };
+    });
+  }
+};
 
 // Workspaces Hook
 export const useWorkspaces = () => {
@@ -50,9 +142,42 @@ export const useUploadAsset = (tenantId: string) => {
       if (!token) throw new Error('No token');
       return uploadAssetDirect(token, file, tenantId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
+    onSuccess: (asset) => {
+      upsertAssetInAssetsCache(queryClient, tenantId, asset, { insertIfMissing: true });
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+
+      const signal = startThumbnailPollController(asset.id);
+      void (async () => {
+        try {
+          const token = await getToken();
+          if (!token || signal.aborted) return;
+          const readyAsset = await pollAssetUntilThumbnails(token, asset.id, tenantId, signal);
+          if (signal.aborted) return;
+          if (readyAsset && (hasRemoteAssetUrl(readyAsset.thumbnailUrl) || hasRemoteAssetUrl(readyAsset.previewUrl))) {
+            clearLocalPreview(asset.id);
+            upsertAssetInAssetsCache(queryClient, tenantId, {
+              ...readyAsset,
+              isProcessingPreview: false,
+              localPreviewUrl: undefined,
+            });
+            return;
+          }
+          markLocalPreviewSettled(asset.id);
+          upsertAssetInAssetsCache(queryClient, tenantId, {
+            ...asset,
+            isProcessingPreview: false,
+          });
+        } catch {
+          if (signal.aborted) return;
+          markLocalPreviewSettled(asset.id);
+          upsertAssetInAssetsCache(queryClient, tenantId, {
+            ...asset,
+            isProcessingPreview: false,
+          });
+        } finally {
+          stopThumbnailPoll(asset.id);
+        }
+      })();
     }
   });
 };
@@ -67,7 +192,9 @@ export const useDeleteAsset = (tenantId: string) => {
       if (!token) throw new Error('No token');
       return deleteAssetApi(token, assetId, tenantId);
     },
-    onSuccess: () => {
+    onSuccess: (_data, assetId) => {
+      stopThumbnailPoll(assetId);
+      clearLocalPreview(assetId);
       queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     }

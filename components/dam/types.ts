@@ -12,16 +12,20 @@ export type AssetStatus = "UPLOADING" | "READY" | "FAILED";
 
 export type ApiAsset = {
   id: string;
-  tenantId: string;
-  userId: string;
+  tenantId?: string;
+  userId?: string;
   name: string;
   mimeType: string;
   sizeBytes: string;
-  storageKey: string;
-  checksum: string | null;
+  storageKey?: string;
+  checksum?: string | null;
   status: AssetStatus;
+  thumbnailKey?: string | null;
+  previewKey?: string | null;
+  thumbnailUrl?: string | null;
+  previewUrl?: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   isFavourite: boolean;
 };
 
@@ -36,8 +40,11 @@ export interface Asset {
   sizeBytes: number;
   dimensions?: string;
   duration?: string;
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
   previewUrl?: string;
+  status?: AssetStatus;
+  isProcessingPreview?: boolean;
+  localPreviewUrl?: string;
   updatedAt: string;
   createdAt: string;
   owner: {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/dam/Header';
 import { AssetGrid } from '@/components/dam/AssetGrid';
@@ -56,12 +56,29 @@ export default function FavoritesPage() {
   // Selected Items State
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
+  useEffect(() => {
+    if (!selectedAsset) return;
+    const latest = fetchedAssets.find((asset) => asset.id === selectedAsset.id);
+    if (!latest) return;
+    if (
+      latest.thumbnailUrl !== selectedAsset.thumbnailUrl ||
+      latest.previewUrl !== selectedAsset.previewUrl ||
+      latest.isProcessingPreview !== selectedAsset.isProcessingPreview
+    ) {
+      setSelectedAsset(latest);
+    }
+  }, [fetchedAssets, selectedAsset]);
+
   const handleToggleFavorite = async (assetId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    
-    // Find the current asset state
-    const currentAsset = fetchedAssets.find(a => a.id === assetId);
-    const isCurrentlyFavourite = currentAsset ? currentAsset.isFavorite : true; // In favourites tab, it's mostly true initially
+
+    const currentAsset =
+      fetchedAssets.find((a) => a.id === assetId) ??
+      (selectedAsset?.id === assetId ? selectedAsset : undefined);
+
+    if (!currentAsset) return;
+
+    const isCurrentlyFavourite = currentAsset.isFavorite;
 
     // Optimistically update ALL asset caches to flip the favorite flag
     queryClient.setQueriesData({ queryKey: ['assets', activeTenantId] }, (old: any) => {
@@ -80,23 +97,47 @@ export default function FavoritesPage() {
       };
     });
 
-    // Explicitly remove it from the CURRENT favorites view so it vanishes instantly
-    queryClient.setQueryData(['assets', activeTenantId, filters], (old: any) => {
-      if (!old || !old.pages) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page: any) => ({
-          ...page,
-          items: page.items.filter((asset: Asset) => asset.id !== assetId)
-        }))
-      };
-    });
-    
-    if (selectedAsset && selectedAsset.id === assetId) {
-      setSelectedAsset(null);
+    if (isCurrentlyFavourite) {
+      queryClient.setQueryData(['assets', activeTenantId, filters], (old: any) => {
+        if (!old || !old.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.filter((asset: Asset) => asset.id !== assetId)
+          }))
+        };
+      });
+
+      if (selectedAsset && selectedAsset.id === assetId) {
+        setSelectedAsset(null);
+      }
+    } else {
+      queryClient.setQueryData(['assets', activeTenantId, filters], (old: any) => {
+        if (!old || !old.pages || old.pages.length === 0) return old;
+
+        const firstPage = old.pages[0];
+        if (firstPage.items.some((asset: Asset) => asset.id === assetId)) return old;
+
+        return {
+          ...old,
+          pages: [
+            { ...firstPage, items: [{ ...currentAsset, isFavorite: true }, ...firstPage.items] },
+            ...old.pages.slice(1)
+          ]
+        };
+      });
+
+      if (selectedAsset && selectedAsset.id === assetId) {
+        setSelectedAsset((prev) => (prev ? { ...prev, isFavorite: true } : null));
+      }
     }
 
-    triggerToast(`Removed from Favorites`);
+    triggerToast(
+      isCurrentlyFavourite
+        ? `Removed "${currentAsset.name}" from Favorites`
+        : `Added "${currentAsset.name}" to Favorites`
+    );
 
     try {
       await toggleFavourite({ assetId, isCurrentlyFavourite });
@@ -123,11 +164,10 @@ export default function FavoritesPage() {
           };
         });
 
-        // Re-add to current favorites view
-        if (currentAsset) {
+        if (isCurrentlyFavourite) {
           queryClient.setQueryData(['assets', activeTenantId, filters], (old: any) => {
             if (!old || !old.pages || old.pages.length === 0) return old;
-            
+
             const firstPage = old.pages[0];
             return {
               ...old,
@@ -137,6 +177,27 @@ export default function FavoritesPage() {
               ]
             };
           });
+
+          if (selectedAsset && selectedAsset.id === assetId) {
+            setSelectedAsset(currentAsset);
+          }
+        } else {
+          queryClient.setQueryData(['assets', activeTenantId, filters], (old: any) => {
+            if (!old || !old.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: any) => ({
+                ...page,
+                items: page.items.filter((asset: Asset) => asset.id !== assetId)
+              }))
+            };
+          });
+
+          if (selectedAsset && selectedAsset.id === assetId) {
+            setSelectedAsset((prev) =>
+              prev ? { ...prev, isFavorite: isCurrentlyFavourite } : null
+            );
+          }
         }
       }
     }

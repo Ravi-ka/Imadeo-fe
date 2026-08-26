@@ -79,6 +79,19 @@ export default function MediaAssetsPage() {
 
   const { mutateAsync: toggleFavourite } = useToggleFavourite(activeTenantId);
 
+  useEffect(() => {
+    if (!selectedAsset) return;
+    const latest = fetchedAssets.find((asset) => asset.id === selectedAsset.id);
+    if (!latest) return;
+    if (
+      latest.thumbnailUrl !== selectedAsset.thumbnailUrl ||
+      latest.previewUrl !== selectedAsset.previewUrl ||
+      latest.isProcessingPreview !== selectedAsset.isProcessingPreview
+    ) {
+      setSelectedAsset(latest);
+    }
+  }, [fetchedAssets, selectedAsset]);
+
   const handleToggleFavorite = async (assetId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     

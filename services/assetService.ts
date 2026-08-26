@@ -1,6 +1,67 @@
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.imadeo.in';
 
-import { Asset, ApiAsset } from '@/components/dam/types';
+import { Asset, ApiAsset, AssetType } from '@/components/dam/types';
+
+const localPreviewByAssetId = new Map<string, string>();
+const settledLocalPreviewIds = new Set<string>();
+const thumbnailPollControllers = new Map<string, AbortController>();
+const THUMBNAIL_POLL_DELAYS_MS = [2000, 1500, 2000, 3000, 4000];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const hasRemoteAssetUrl = (url?: string | null): boolean =>
+  Boolean(url && !url.startsWith('blob:'));
+
+export const getLocalPreview = (assetId: string): string | undefined =>
+  localPreviewByAssetId.get(assetId);
+
+export const registerLocalPreview = (assetId: string, url: string) => {
+  const previous = localPreviewByAssetId.get(assetId);
+  if (previous && previous !== url) {
+    URL.revokeObjectURL(previous);
+  }
+  localPreviewByAssetId.set(assetId, url);
+};
+
+export const clearLocalPreview = (assetId: string) => {
+  const url = localPreviewByAssetId.get(assetId);
+  if (url) {
+    URL.revokeObjectURL(url);
+    localPreviewByAssetId.delete(assetId);
+  }
+  settledLocalPreviewIds.delete(assetId);
+};
+
+export const markLocalPreviewSettled = (assetId: string) => {
+  settledLocalPreviewIds.add(assetId);
+};
+
+export const stopThumbnailPoll = (assetId: string) => {
+  const controller = thumbnailPollControllers.get(assetId);
+  controller?.abort();
+  thumbnailPollControllers.delete(assetId);
+};
+
+export const startThumbnailPollController = (assetId: string): AbortSignal => {
+  stopThumbnailPoll(assetId);
+  const controller = new AbortController();
+  thumbnailPollControllers.set(assetId, controller);
+  return controller.signal;
+};
+
+const unwrapApiAsset = (res: unknown): ApiAsset | null => {
+  if (!res || typeof res !== 'object') return null;
+  if ('asset' in res) {
+    const nested = (res as { asset?: unknown }).asset;
+    if (nested && typeof nested === 'object' && 'id' in nested) {
+      return nested as ApiAsset;
+    }
+  }
+  if ('id' in res && 'mimeType' in res) {
+    return res as ApiAsset;
+  }
+  return null;
+};
 
 interface FetchOptions extends RequestInit {
   tenantId?: string;
@@ -39,20 +100,16 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
   const extMatch = apiAsset.name.match(/\.([a-z0-9]+)$/i);
   const extension = extMatch ? extMatch[1].toUpperCase() : 'FILE';
   
-  let type: Asset['type'] = 'document';
+  let type: AssetType = 'document';
   if (apiAsset.mimeType.startsWith('image/')) type = 'image';
   else if (apiAsset.mimeType.startsWith('video/')) type = 'video';
   else if (apiAsset.mimeType.startsWith('audio/')) type = 'audio';
-  
-  // Create a placeholder thumbnail based on type
-  let thumbnailUrl = '';
-  if (type === 'image') {
-    thumbnailUrl = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80';
-  } else if (type === 'video') {
-    thumbnailUrl = 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80';
-  } else {
-    thumbnailUrl = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80';
-  }
+
+  const localPreview = getLocalPreview(apiAsset.id);
+  const hasRemoteThumbnail = hasRemoteAssetUrl(apiAsset.thumbnailUrl);
+  const thumbnailUrl = apiAsset.thumbnailUrl || localPreview || undefined;
+  const previewUrl = apiAsset.previewUrl || ((type === 'image' || type === 'video') ? localPreview : undefined);
+  const updatedAtSource = apiAsset.updatedAt || apiAsset.createdAt;
 
   return {
     id: apiAsset.id,
@@ -62,7 +119,11 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
     size: sizeStr,
     sizeBytes,
     thumbnailUrl,
-    updatedAt: new Date(apiAsset.updatedAt).toLocaleString(undefined, {
+    previewUrl,
+    status: apiAsset.status,
+    isProcessingPreview: Boolean(localPreview) && !hasRemoteThumbnail && !settledLocalPreviewIds.has(apiAsset.id),
+    localPreviewUrl: hasRemoteThumbnail ? undefined : localPreview,
+    updatedAt: new Date(updatedAtSource).toLocaleString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -181,6 +242,54 @@ export const getAssetDownloadUrlApi = async (
   });
 };
 
+export const getAssetByIdApi = async (
+  token: string,
+  assetId: string,
+  tenantId?: string
+): Promise<Asset> => {
+  try {
+    const res = await assetsFetch<unknown>(`/api/assets/${assetId}`, token, {
+      method: 'GET',
+      tenantId,
+    });
+    const apiAsset = unwrapApiAsset(res);
+    if (!apiAsset) {
+      throw Object.assign(new Error('Asset not found'), { status: 404 });
+    }
+    return mapBackendAssetToFrontend(apiAsset);
+  } catch (e: any) {
+    if (e.status === 404 || e.status === 405 || e.status === 400) {
+      const list = await getAssetsApi(token, tenantId, undefined, { status: 'READY' }, 20);
+      const found = list.items.find((item) => item.id === assetId);
+      if (found) return found;
+    }
+    throw e;
+  }
+};
+
+export const pollAssetUntilThumbnails = async (
+  token: string,
+  assetId: string,
+  tenantId: string,
+  signal?: AbortSignal
+): Promise<Asset | null> => {
+  for (const delay of THUMBNAIL_POLL_DELAYS_MS) {
+    if (signal?.aborted) return null;
+    await sleep(delay);
+    if (signal?.aborted) return null;
+
+    try {
+      const asset = await getAssetByIdApi(token, assetId, tenantId);
+      if (hasRemoteAssetUrl(asset.thumbnailUrl) || hasRemoteAssetUrl(asset.previewUrl)) {
+        return asset;
+      }
+    } catch (e: any) {
+      if (e?.name === 'AbortError' || signal?.aborted) return null;
+    }
+  }
+  return null;
+};
+
 export const uploadAssetDirect = async (
   token: string,
   file: File,
@@ -192,16 +301,33 @@ export const uploadAssetDirect = async (
     sizeBytes: file.size,
   }, tenantId);
 
-  const putRes = await fetch(presign.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: file,
-  });
-  
-  if (!putRes.ok) throw new Error("Direct upload to storage failed");
+  const canLocalPreview = file.type.startsWith('image/') || file.type.startsWith('video/');
+  if (canLocalPreview) {
+    registerLocalPreview(presign.assetId, URL.createObjectURL(file));
+  }
 
-  const { asset } = await completeAssetUploadApi(token, presign.assetId, tenantId);
-  return mapBackendAssetToFrontend(asset);
+  try {
+    const putRes = await fetch(presign.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+
+    if (!putRes.ok) throw new Error("Direct upload to storage failed");
+
+    const { asset } = await completeAssetUploadApi(token, presign.assetId, tenantId);
+    if (hasRemoteAssetUrl(asset.thumbnailUrl)) {
+      clearLocalPreview(presign.assetId);
+    }
+    const mapped = mapBackendAssetToFrontend(asset);
+    return {
+      ...mapped,
+      isProcessingPreview: !hasRemoteAssetUrl(asset.thumbnailUrl),
+    };
+  } catch (error) {
+    clearLocalPreview(presign.assetId);
+    throw error;
+  }
 };
 
 export const toggleAssetFavouriteApi = async (

@@ -12,15 +12,11 @@ import { useUploadStore } from '@/store/useUploadStore';
 import { useTenantStore } from '@/store/useTenantStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, Layers } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAssets } from '@/hooks/useAssets';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, getToken, isLoaded: isAuthLoaded } = useAuth();
   const { user } = useUser();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-
   const { imadeoId, setImadeoId } = useTenantStore();
   
   const [isCheckingImadeoId, setIsCheckingImadeoId] = useState(true);
@@ -92,7 +88,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleUploadSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['assets', activeTenantId] });
     triggerToast(`Successfully uploaded assets`);
   };
 

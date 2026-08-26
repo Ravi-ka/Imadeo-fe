@@ -19,7 +19,8 @@ import {
   Filter,
   Check,
   FolderOpen,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Asset, FilterCategory, SortBy, ViewMode } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -137,6 +138,48 @@ export function AssetGrid({
       default:
         return null;
     }
+  };
+
+  const isBlobUrl = (url?: string) => Boolean(url?.startsWith('blob:'));
+
+  const renderThumbnail = (asset: Asset, compact = false) => {
+    const src = asset.thumbnailUrl;
+    const showVideoEl = asset.type === 'video' && Boolean(src && isBlobUrl(src));
+
+    return (
+      <>
+        {showVideoEl ? (
+          <video
+            src={src}
+            muted
+            playsInline
+            className={`w-full h-full object-cover ${compact ? '' : 'group-hover:scale-105 transition-transform duration-500'}`}
+          />
+        ) : src ? (
+          <img
+            src={src}
+            alt={asset.name}
+            className={`w-full h-full object-cover ${compact ? '' : 'group-hover:scale-105 transition-transform duration-500'}`}
+          />
+        ) : (
+          <div className={`flex items-center justify-center text-slate-400 ${asset.isProcessingPreview ? 'animate-pulse bg-slate-200 dark:bg-slate-800 w-full h-full' : ''}`}>
+            {getTypeIcon(asset.type, asset.extension) || <FileText className={compact ? 'w-4 h-4' : 'w-6 h-6'} />}
+          </div>
+        )}
+        {asset.isProcessingPreview && (
+          compact ? (
+            <div className="absolute inset-0 z-20 bg-slate-950/35 flex items-center justify-center">
+              <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+            </div>
+          ) : (
+            <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-black/70 text-white border border-white/10">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Processing
+            </div>
+          )
+        )}
+      </>
+    );
   };
 
   return (
@@ -275,11 +318,7 @@ export function AssetGrid({
               >
                 {/* Media Preview Box */}
                 <div className="relative w-full aspect-video bg-slate-100 dark:bg-slate-950 overflow-hidden flex items-center justify-center">
-                  <img
-                    src={asset.thumbnailUrl}
-                    alt={asset.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                  {renderThumbnail(asset)}
 
                   {/* Video Play Overlay */}
                   {asset.type === 'video' && (
@@ -365,11 +404,7 @@ export function AssetGrid({
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-3">
                         <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800">
-                          <img
-                            src={asset.thumbnailUrl}
-                            alt={asset.name}
-                            className="w-full h-full object-cover"
-                          />
+                          {renderThumbnail(asset, true)}
                           {asset.type === 'video' && (
                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                               <Play className="w-3 h-3 text-white fill-white" />
