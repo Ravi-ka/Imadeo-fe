@@ -4,14 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Layers, 
   LayoutDashboard, 
-  Image as ImageIcon, 
   Boxes, 
-  Users, 
-  Clock, 
-  Star, 
-  Trash2, 
   Settings, 
   ChevronLeft, 
   ChevronRight,
@@ -19,7 +13,6 @@ import {
   LogOut,
   UserCheck,
   Sparkles,
-  AtSign,
   ChartNoAxesCombined,
   Zap,
   Images
@@ -29,6 +22,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaces } from '@/hooks/useAssets';
+import { Logo } from '@/components/Logo';
 
 interface SidebarProps {
   activeNav?: NavCategory;
@@ -109,28 +103,30 @@ export function Sidebar({
       {/* Brand Header */}
       <div className={`flex items-center h-16 border-b border-slate-200/60 dark:border-slate-800/60 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
         <div className={`flex items-center space-x-3 overflow-hidden ${isCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-secondary to-accent flex items-center justify-center text-white shadow-md shadow-primary/20 shrink-0">
-            <Layers className="w-5 h-5" />
-          </div>
-          {!isCollapsed && (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="flex flex-col overflow-hidden whitespace-nowrap"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
-                  Imadeo
+          {isCollapsed ? (
+            <Logo href="/" showWordmark={false} size="lg" />
+          ) : (
+            <>
+              <Logo href={false} showWordmark={false} size="lg" />
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="flex flex-col overflow-hidden whitespace-nowrap"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Link href="/" className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
+                    Imadeo
+                  </Link>
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light border border-primary/20">
+                    DAM
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                  Asset Hub
                 </span>
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light border border-primary/20">
-                  DAM
-                </span>
-              </div>
-              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                Asset Hub
-              </span>
-            </motion.div>
+              </motion.div>
+            </>
           )}
         </div>
       </div>

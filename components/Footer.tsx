@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Layers, Github, Twitter, Linkedin } from 'lucide-react';
+import { Github, Twitter, Linkedin } from 'lucide-react';
+import { Logo } from './Logo';
 
 export function Footer() {
   return (
@@ -12,12 +13,7 @@ export function Footer() {
           
           {/* Brand Info */}
           <div className="col-span-2 space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white">
-                <Layers className="w-4.5 h-4.5" />
-              </div>
-              <span className="text-lg font-bold text-slate-900 dark:text-white">Imadeo</span>
-            </Link>
+            <Logo size="sm" />
             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
               Process, optimize, secure and distribute image and video files at production-scale with high-efficiency APIs.
             </p>

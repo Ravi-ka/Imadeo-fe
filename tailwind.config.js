@@ -14,19 +14,19 @@ module.exports = {
           dark: '#090a0f',
         },
         primary: {
-          DEFAULT: '#3b82f6', // Blue
-          light: '#60a5fa',
-          dark: '#1d4ed8',
+          DEFAULT: '#22c55e', // Brand green
+          light: '#4ade80',
+          dark: '#15803d',
         },
         secondary: {
-          DEFAULT: '#a855f7', // Purple
-          light: '#c084fc',
-          dark: '#7e22ce',
+          DEFAULT: '#84cc16', // Lime
+          light: '#a3e635',
+          dark: '#4d7c0f',
         },
         accent: {
-          DEFAULT: '#06b6d4', // Cyan
-          light: '#22d3ee',
-          dark: '#0891b2',
+          DEFAULT: '#65a30d', // Olive accent
+          light: '#a3e635',
+          dark: '#3f6212',
         },
         success: '#10b981', // Green
         warning: '#f59e0b', // Orange
@@ -36,7 +36,7 @@ module.exports = {
         sans: ['Inter', 'sans-serif'],
       },
       backgroundImage: {
-        'grid-pattern': "radial-gradient(circle, rgba(120, 119, 198, 0.1) 1px, transparent 1px)",
+        'grid-pattern': "radial-gradient(circle, rgba(34, 197, 94, 0.1) 1px, transparent 1px)",
       },
       animation: {
         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',

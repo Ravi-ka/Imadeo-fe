@@ -14,7 +14,6 @@ import {
   Share2, 
   Trash2, 
   SearchX,
-  Clock,
   ArrowUpDown,
   Filter,
   Check,
@@ -172,7 +171,7 @@ export function AssetGrid({
               <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
             </div>
           ) : (
-            <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-black/70 text-white border border-white/10">
+            <div className="absolute top-10 left-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-black/70 text-white border border-white/10">
               <Loader2 className="w-3 h-3 animate-spin" />
               Processing
             </div>
@@ -300,7 +299,7 @@ export function AssetGrid({
         )
       ) : viewMode === 'grid' ? (
         /* Grid View Layout */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {assets.map((asset, idx) => {
             const isSelected = selectedAssetId === asset.id;
             return (
@@ -310,65 +309,62 @@ export function AssetGrid({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: idx * 0.03 }}
                 onClick={() => onSelectAsset(asset)}
-                className={`group relative flex flex-col rounded-2xl border transition-all cursor-pointer select-none overflow-hidden ${
+                className={`group relative aspect-square rounded-2xl border transition-all cursor-pointer select-none overflow-hidden ${
                   isSelected
-                    ? 'bg-primary/10 border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/40'
-                    : 'bg-white/80 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                    ? 'border-primary shadow-xl shadow-primary/20 ring-2 ring-primary/50'
+                    : 'border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm hover:shadow-md'
                 }`}
               >
-                {/* Media Preview Box */}
-                <div className="relative w-full aspect-video bg-slate-100 dark:bg-slate-950 overflow-hidden flex items-center justify-center">
+                {/* Full-bleed media */}
+                <div className="absolute inset-0 bg-slate-100 dark:bg-slate-950">
                   {renderThumbnail(asset)}
 
-                  {/* Video Play Overlay */}
-                  {asset.type === 'video' && (
-                    <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-white/90 dark:bg-slate-900/90 text-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Play className="w-5 h-5 fill-primary ml-0.5" />
+                  {asset.type === 'video' && !asset.isProcessingPreview && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <Play className="w-5 h-5 fill-white ml-0.5" />
                       </div>
                     </div>
                   )}
-
-                  {/* Duration Badge for Videos */}
-                  {asset.duration && (
-                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-black/75 backdrop-blur-md text-white border border-white/10">
-                      {asset.duration}
-                    </span>
-                  )}
-
-                  {/* Type Badge Top Left */}
-                  <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border backdrop-blur-md ${getTypeBadgeColor(asset.type, asset.extension)}`}>
-                    {asset.extension}
-                  </span>
-
-                  {/* Star Favorite Button Top Right */}
-                  <button
-                    onClick={(e) => onToggleFavorite(asset.id, e)}
-                    className={`absolute top-2 right-2 p-1.5 rounded-lg backdrop-blur-md transition-all ${
-                      asset.isFavorite
-                        ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
-                        : 'bg-black/40 border border-white/20 text-white/70 opacity-0 group-hover:opacity-100 hover:text-amber-400'
-                    }`}
-                  >
-                    <Star className={`w-3.5 h-3.5 ${asset.isFavorite ? 'fill-amber-400' : ''}`} />
-                  </button>
                 </div>
 
-                {/* Info Container */}
-                <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-primary dark:group-hover:text-primary-light transition-colors" title={asset.name}>
-                      {asset.name}
-                    </h3>
-                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      <span className="whitespace-nowrap font-medium">{asset.size}</span>
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span>{asset.updatedAt}</span>
-                      </span>
-                    </div>
-                  </div>
+                {/* Top badges & actions */}
+                <span className={`absolute top-2 left-2 z-20 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border backdrop-blur-md ${getTypeBadgeColor(asset.type, asset.extension)}`}>
+                  {asset.extension}
+                </span>
 
+                {asset.duration && (
+                  <span className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-black/70 backdrop-blur-md text-white border border-white/10">
+                    {asset.duration}
+                  </span>
+                )}
+
+                <button
+                  onClick={(e) => onToggleFavorite(asset.id, e)}
+                  className={`absolute top-2 z-20 p-1.5 rounded-lg backdrop-blur-md transition-all ${
+                    asset.duration ? 'right-12' : 'right-2'
+                  } ${
+                    asset.isFavorite
+                      ? 'bg-amber-500/25 border border-amber-500/40 text-amber-300'
+                      : 'bg-black/45 border border-white/15 text-white/80 opacity-0 group-hover:opacity-100 hover:text-amber-300'
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${asset.isFavorite ? 'fill-amber-300' : ''}`} />
+                </button>
+
+                {/* Bottom metadata overlay */}
+                <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pt-10 pb-3 pointer-events-none">
+                  <h3
+                    className="font-semibold text-sm text-white line-clamp-1 leading-snug"
+                    title={asset.name}
+                  >
+                    {asset.name}
+                  </h3>
+                  <p className="mt-1 text-[11px] text-white/75 leading-snug line-clamp-1">
+                    <span>{asset.size}</span>
+                    <span className="mx-1.5 text-white/40">·</span>
+                    <span>{asset.updatedAt}</span>
+                  </p>
                 </div>
               </motion.div>
             );

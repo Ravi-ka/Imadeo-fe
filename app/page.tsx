@@ -3,22 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
-  Layers, 
   Sparkles, 
-  Zap, 
-  Cpu, 
-  ShieldCheck, 
-  HardDrive, 
   Share2, 
-  SlidersHorizontal, 
   ArrowRight, 
   CheckCircle2, 
   ChevronDown, 
-  Database,
-  Maximize2,
-  FileCode2,
-  Lock,
-  Workflow,
   FolderOpen,
   Users,
   LayoutDashboard

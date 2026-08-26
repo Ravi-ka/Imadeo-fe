@@ -11,7 +11,8 @@ import { useToastStore } from '@/store/useToastStore';
 import { useUploadStore } from '@/store/useUploadStore';
 import { useTenantStore } from '@/store/useTenantStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Loader2, Layers } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -95,8 +96,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
       {isCheckingImadeoId && (
         <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center space-y-4 text-white">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary via-secondary to-accent flex items-center justify-center shadow-lg shadow-primary/40 animate-pulse">
-            <Layers className="w-6 h-6" />
+          <div className="animate-pulse">
+            <Logo href={false} showWordmark={false} size="xl" />
           </div>
           <div className="flex items-center space-x-2 text-sm font-medium text-slate-400">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />

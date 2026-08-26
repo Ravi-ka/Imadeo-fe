@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Layers, ArrowRight, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
+import { ArrowRight, AlertCircle, Sparkles, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { Logo } from '@/components/Logo';
 
 interface CreateImadeoIdModalProps {
   isOpen: boolean;
@@ -107,10 +108,8 @@ export function CreateImadeoIdModal({ isOpen, onSubmit, initialError }: CreateIm
 
           {/* Logo & Title Header */}
           <div className="text-center space-y-3 mb-6">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary via-secondary to-accent p-0.5 flex items-center justify-center shadow-lg shadow-primary/30">
-              <div className="w-full h-full bg-slate-900/20 rounded-[14px] flex items-center justify-center text-white">
-                <Layers className="w-7 h-7" />
-              </div>
+            <div className="mx-auto flex justify-center">
+              <Logo href={false} showWordmark={false} size="xl" />
             </div>
 
             <div className="space-y-1">
