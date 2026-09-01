@@ -35,6 +35,7 @@ interface AssetDetailsDrawerProps {
   onShare: (name: string) => void;
   onRenameAsset?: (assetId: string, newName: string) => void;
   onDownloadAsset?: (assetId: string) => void;
+  onMoveAsset?: (assetId: string) => void;
   isViewer?: boolean;
 }
 
@@ -46,6 +47,7 @@ export function AssetDetailsDrawer({
   onShare,
   onRenameAsset,
   onDownloadAsset,
+  onMoveAsset,
   isViewer = false
 }: AssetDetailsDrawerProps) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
@@ -255,7 +257,7 @@ export function AssetDetailsDrawer({
           </div>
 
           {/* Quick Action Toolbar */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className={`grid gap-2 ${!isViewer && onMoveAsset ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <button
               onClick={() => onShare(title)}
               className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
@@ -286,6 +288,16 @@ export function AssetDetailsDrawer({
               </button>
             )}
 
+            {selectedAsset && !isViewer && onMoveAsset && (
+              <button
+                onClick={() => onMoveAsset(selectedAsset.id)}
+                className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+              >
+                <MoveRight className="w-4 h-4 text-blue-500 mb-1" />
+                <span className="text-[11px] font-semibold">Move</span>
+              </button>
+            )}
+
             {selectedAsset && !isViewer && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -305,10 +317,10 @@ export function AssetDetailsDrawer({
                   type="text"
                   value={title}
                   onChange={(e) => onRenameAsset && onRenameAsset(selectedAsset.id, e.target.value)}
-                  className="w-full font-extrabold text-slate-900 dark:text-white text-lg bg-transparent border-b border-primary focus:outline-none"
+                  className="w-full font-extrabold text-slate-900 dark:text-white text-xs bg-transparent border-b border-primary focus:outline-none"
                 />
               ) : (
-                <h4 className="font-extrabold text-slate-900 dark:text-white text-lg break-all">
+                <h4 className="font-semibold text-slate-500 dark:text-white text-xs break-all">
                   {title}
                 </h4>
               )}
@@ -325,6 +337,7 @@ export function AssetDetailsDrawer({
               </button>
             </div> */}
           </div>
+    
 
           {/* Metadata Specifications Grid */}
           <div className="space-y-3">

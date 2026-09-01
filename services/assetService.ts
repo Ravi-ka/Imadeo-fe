@@ -138,20 +138,27 @@ export const mapBackendAssetToFrontend = (apiAsset: ApiAsset): Asset => {
     },
     isFavorite: apiAsset.isFavourite || false,
     tags: [],
-    path: `/Root/${apiAsset.name}`
+    path: `/Root/${apiAsset.name}`,
+    folderId: apiAsset.folderId ?? null,
   };
+};
+
+export type AssetListFilters = {
+  favourite?: boolean;
+  type?: string;
+  search?: string;
+  status?: string;
+  /** Assets in this folder only (not nested). Do not combine with root. */
+  folderId?: string;
+  /** Unfiled (root) assets only. Do not combine with folderId. */
+  root?: boolean;
 };
 
 export const getAssetsApi = async (
   token: string, 
   tenantId?: string,
   cursor?: string,
-  filters?: {
-    favourite?: boolean;
-    type?: string;
-    search?: string;
-    status?: string;
-  },
+  filters?: AssetListFilters,
   take: number = 20
 ): Promise<{ 
   items: Asset[], 
@@ -166,6 +173,8 @@ export const getAssetsApi = async (
   if (filters?.type) q.append("type", filters.type);
   if (filters?.search) q.append("search", filters.search);
   if (filters?.status) q.append("status", filters.status);
+  if (filters?.folderId) q.append("folderId", filters.folderId);
+  else if (filters?.root) q.append("root", "true");
   
   const path = `/api/assets?${q}`;
   
@@ -186,12 +195,19 @@ export const getAssetsApi = async (
 
 export const presignAssetApi = async (
   token: string,
-  data: { name: string; mimeType: string; sizeBytes: number },
+  data: { name: string; mimeType: string; sizeBytes: number; folderId?: string },
   tenantId?: string
 ): Promise<{ uploadUrl: string; assetId: string, expiresIn: number, headers: { "Content-Type": string } }> => {
+  const body: { name: string; mimeType: string; sizeBytes: number; folderId?: string } = {
+    name: data.name,
+    mimeType: data.mimeType,
+    sizeBytes: data.sizeBytes,
+  };
+  if (data.folderId) body.folderId = data.folderId;
+
   return assetsFetch<{ uploadUrl: string; assetId: string, expiresIn: number, headers: { "Content-Type": string } }>('/api/assets/presign', token, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(body),
     tenantId,
   });
 };
@@ -227,6 +243,32 @@ export const renameAssetApi = async (
   return assetsFetch<{ asset: ApiAsset }>(`/api/assets/${assetId}`, token, {
     method: 'PATCH',
     body: JSON.stringify({ name }),
+    tenantId,
+  });
+};
+
+export const moveAssetApi = async (
+  token: string,
+  assetId: string,
+  folderId: string | null,
+  tenantId?: string
+): Promise<{ asset: ApiAsset }> => {
+  return assetsFetch<{ asset: ApiAsset }>(`/api/assets/${assetId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ folderId }),
+    tenantId,
+  });
+};
+
+export const patchAssetApi = async (
+  token: string,
+  assetId: string,
+  data: { name?: string; folderId?: string | null },
+  tenantId?: string
+): Promise<{ asset: ApiAsset }> => {
+  return assetsFetch<{ asset: ApiAsset }>(`/api/assets/${assetId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
     tenantId,
   });
 };
@@ -293,12 +335,14 @@ export const pollAssetUntilThumbnails = async (
 export const uploadAssetDirect = async (
   token: string,
   file: File,
-  tenantId: string
+  tenantId: string,
+  folderId?: string | null
 ): Promise<Asset> => {
   const presign = await presignAssetApi(token, {
     name: file.name,
     mimeType: file.type || "application/octet-stream",
     sizeBytes: file.size,
+    ...(folderId ? { folderId } : {}),
   }, tenantId);
 
   const canLocalPreview = file.type.startsWith('image/') || file.type.startsWith('video/');

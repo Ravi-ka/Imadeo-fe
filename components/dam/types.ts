@@ -27,6 +27,29 @@ export type ApiAsset = {
   createdAt: string;
   updatedAt?: string;
   isFavourite: boolean;
+  folderId?: string | null;
+};
+
+export const FOLDER_MAX_DEPTH = 3;
+
+export type Folder = {
+  id: string;
+  tenantId: string;
+  userId: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FolderNode = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  children: FolderNode[];
 };
 
 export type AssetType = 'image' | 'video' | 'document' | 'design' | 'audio';
@@ -57,6 +80,7 @@ export interface Asset {
   tags: string[];
   description?: string;
   path?: string;
+  folderId?: string | null;
 }
 
 

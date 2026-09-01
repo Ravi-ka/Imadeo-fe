@@ -7,6 +7,7 @@ import {
   uploadAssetDirect,
   deleteAssetApi,
   renameAssetApi,
+  moveAssetApi,
   getAssetDownloadUrlApi,
   toggleAssetFavouriteApi,
   pollAssetUntilThumbnails,
@@ -15,9 +16,8 @@ import {
   clearLocalPreview,
   markLocalPreviewSettled,
   hasRemoteAssetUrl,
+  type AssetListFilters,
 } from '@/services/assetService';
-
-type AssetListFilters = { favourite?: boolean; type?: string; search?: string; status?: string };
 
 type AssetsPage = {
   items: Asset[];
@@ -34,6 +34,11 @@ const assetMatchesListFilters = (asset: Asset, filters?: AssetListFilters): bool
   if (filters.type && asset.type !== filters.type) return false;
   if (filters.search && !asset.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
   if (filters.status && asset.status && asset.status !== filters.status) return false;
+  if (filters.folderId) {
+    if (asset.folderId !== filters.folderId) return false;
+  } else if (filters.root) {
+    if (asset.folderId) return false;
+  }
   return true;
 };
 
@@ -116,7 +121,7 @@ export const useWorkspaces = () => {
 };
 
 // Assets Hooks
-export const useAssets = (tenantId: string, filters?: { favourite?: boolean; type?: string; search?: string; status?: string }, take: number = 20) => {
+export const useAssets = (tenantId: string, filters?: AssetListFilters, take: number = 20) => {
   const { getToken } = useAuth();
   return useInfiniteQuery({
     queryKey: ['assets', tenantId, filters],
@@ -132,7 +137,7 @@ export const useAssets = (tenantId: string, filters?: { favourite?: boolean; typ
   });
 };
 
-export const useUploadAsset = (tenantId: string) => {
+export const useUploadAsset = (tenantId: string, folderId?: string | null) => {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
@@ -140,7 +145,7 @@ export const useUploadAsset = (tenantId: string) => {
     mutationFn: async (file: File) => {
       const token = await getToken();
       if (!token) throw new Error('No token');
-      return uploadAssetDirect(token, file, tenantId);
+      return uploadAssetDirect(token, file, tenantId, folderId);
     },
     onSuccess: (asset) => {
       upsertAssetInAssetsCache(queryClient, tenantId, asset, { insertIfMissing: true });
@@ -214,6 +219,23 @@ export const useRenameAsset = (tenantId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
     }
+  });
+};
+
+export const useMoveAsset = (tenantId: string) => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, folderId }: { assetId: string; folderId: string | null }) => {
+      const token = await getToken();
+      if (!token) throw new Error('No token');
+      return moveAssetApi(token, assetId, folderId, tenantId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['folders', tenantId] });
+    },
   });
 };
 

@@ -11,7 +11,8 @@ import {
   SlidersHorizontal,
   UploadCloud,
   ChevronDown,
-  FolderUp
+  FolderUp,
+  FolderPlus
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +24,8 @@ interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenUpload: () => void;
+  onOpenCreateFolder?: () => void;
+  canCreateFolder?: boolean;
   selectedCount?: number;
   totalAssetsCount: number;
   isViewer?: boolean;
@@ -34,6 +37,8 @@ export function Header({
   searchQuery,
   onSearchChange,
   onOpenUpload,
+  onOpenCreateFolder,
+  canCreateFolder = true,
   selectedCount = 0,
   totalAssetsCount,
   isViewer = false
@@ -202,6 +207,16 @@ export function Header({
           <ThemeToggle />
 
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {!isViewer && onOpenCreateFolder && canCreateFolder && (
+              <Button
+                variant="outline"
+                onClick={onOpenCreateFolder}
+                className="hidden sm:inline-flex h-9 sm:h-10 rounded-xl border-slate-200 dark:border-slate-800"
+              >
+                <FolderPlus className="w-4 h-4 mr-1.5" />
+                New folder
+              </Button>
+            )}
             {/* Conditional Upload Button */}
             {!isViewer && (
               <div className="relative" ref={dropdownRef}>

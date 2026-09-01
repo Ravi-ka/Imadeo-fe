@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { UploadCloud, X, File, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import React, { useRef, useState } from 'react';
+import { UploadCloud, X, File, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Asset } from './types';
 
 import { useUploadAsset } from '@/hooks/useAssets';
+import { useUploadStore } from '@/store/useUploadStore';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -28,13 +28,62 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { mutateAsync: uploadAsset } = useUploadAsset(activeTenantId);
+  const uploadFolderId = useUploadStore((s) => s.uploadFolderId);
+  const { mutateAsync: uploadAsset } = useUploadAsset(activeTenantId, uploadFolderId);
+
+  const resetDragState = () => {
+    dragCounter.current = 0;
+    setIsDragging(false);
+  };
+
+  const applyFile = (file: File | undefined) => {
+    if (!file || isUploading) return;
+    setErrorMsg(null);
+    setSelectedFile(file);
+  };
 
   const handleClose = () => {
     setSelectedFile(null);
     setErrorMsg(null);
+    resetDragState();
     onClose();
+  };
+
+  const preventBrowserOpen = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    preventBrowserOpen(e);
+    if (isUploading) return;
+    dragCounter.current += 1;
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    preventBrowserOpen(e);
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      resetDragState();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    preventBrowserOpen(e);
+    if (isUploading) return;
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    preventBrowserOpen(e);
+    resetDragState();
+    if (isUploading) return;
+    applyFile(e.dataTransfer.files?.[0]);
   };
 
   if (!isOpen) return null;
@@ -77,7 +126,11 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onDragOver={preventBrowserOpen}
+        onDrop={preventBrowserOpen}
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -92,6 +145,8 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          onDragOver={preventBrowserOpen}
+          onDrop={preventBrowserOpen}
           className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 z-10 space-y-6 overflow-hidden"
         >
           {/* Header */}
@@ -115,26 +170,40 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
             </button>
           </div>
 
-          {/* Drag & Drop Area */}
-          <div 
-            onClick={() => {
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.onchange = (e: any) => {
-                if (e.target.files?.[0]) {
-                  setSelectedFile(e.target.files[0]);
-                }
-              };
-              input.click();
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept={ALLOWED_MIME_TYPES.join(',')}
+            disabled={isUploading}
+            onChange={(e) => {
+              applyFile(e.target.files?.[0]);
+              e.target.value = '';
             }}
-            className="group relative w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-slate-50/50 dark:bg-slate-950/50"
+          />
+
+          {/* Drag & Drop Area */}
+          <div
+            onClick={() => {
+              if (isUploading) return;
+              fileInputRef.current?.click();
+            }}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            className={`group relative w-full border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+              isDragging
+                ? 'border-primary bg-primary/10 dark:bg-primary/15'
+                : 'border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary bg-slate-50/50 dark:bg-slate-950/50'
+            }`}
           >
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <div className="pointer-events-none w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <UploadCloud className="w-6 h-6" />
             </div>
 
-            {selectedFile ? (
-              <div className="space-y-1">
+            {selectedFile && !isDragging ? (
+              <div className="pointer-events-none space-y-1">
                 <span className="font-bold text-sm text-primary flex items-center justify-center gap-1.5">
                   <File className="w-4 h-4" /> {selectedFile.name}
                 </span>
@@ -143,9 +212,15 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
                 </p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="pointer-events-none space-y-1">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  <span className="text-primary">Click to upload</span> or drag and drop
+                  {isDragging ? (
+                    'Drop file to upload'
+                  ) : (
+                    <>
+                      <span className="text-primary">Click to upload</span> or drag and drop
+                    </>
+                  )}
                 </p>
                 <p className="text-xs text-slate-400">
                   PNG, JPG, MP4, MOV, PDF, FIG up to 500MB

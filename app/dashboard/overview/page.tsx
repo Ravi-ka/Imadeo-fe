@@ -20,7 +20,7 @@ export default function OverviewPage() {
         breadcrumbs={['Home', 'Overview']}
         searchQuery=""
         onSearchChange={() => {}}
-        onOpenUpload={openUpload}
+        onOpenUpload={() => openUpload()}
         totalAssetsCount={0} // Hide count in header for overview
         isViewer={false}
       />
@@ -35,7 +35,7 @@ export default function OverviewPage() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={openUpload}
+              onClick={() => openUpload()}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-medium shadow-md shadow-primary/20 hover:bg-primary-dark transition-colors"
             >
               <Upload className="w-4 h-4" /> Upload Assets
