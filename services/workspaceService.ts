@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/services/config';
+import { getApiBaseUrl } from '@/services/config';
 import { Workspace } from '@/components/dam/types';
 
 interface FetchOptions extends RequestInit {
@@ -16,7 +16,7 @@ async function workspaceFetch<T>(path: string, token: string, opts: FetchOptions
     headers["X-Tenant-Id"] = opts.tenantId;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...opts,
     headers,
   });

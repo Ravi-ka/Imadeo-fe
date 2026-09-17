@@ -8,12 +8,14 @@ import { Button } from './ui/Button';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './Logo';
+import { useTenantStore } from '@/store/useTenantStore';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const clearTenant = useTenantStore((state) => state.clearTenant);
 
   const displayName =
     user?.firstName || user?.username || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
@@ -26,6 +28,7 @@ export function Navbar() {
   ];
 
   const handleSignOut = () => {
+    clearTenant();
     void signOut({ redirectUrl: '/' });
   };
 

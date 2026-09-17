@@ -1,5 +1,11 @@
 const DEV_FALLBACK_API_URL = 'http://localhost:8000';
 
+/**
+ * Backend API origin. Call at request time so a missing production env
+ * fails the request instead of crashing the module graph on import.
+ *
+ * Vercel production must set NEXT_PUBLIC_API_URL (e.g. https://api.imadeo.in).
+ */
 export function getApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
 
@@ -15,5 +21,3 @@ export function getApiBaseUrl(): string {
 
   return DEV_FALLBACK_API_URL;
 }
-
-export const API_BASE_URL = getApiBaseUrl();

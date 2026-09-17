@@ -22,6 +22,7 @@ import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaces } from '@/hooks/useAssets';
 import { Logo } from '@/components/Logo';
+import { useTenantStore } from '@/store/useTenantStore';
 
 interface SidebarProps {
   activeNav?: NavCategory;
@@ -41,6 +42,7 @@ export function Sidebar({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isLoaded } = useUser();
   const { signOut, openUserProfile } = useClerk();
+  const clearTenant = useTenantStore((state) => state.clearTenant);
   const pathname = usePathname();
 
   const userName = isLoaded && user
@@ -255,6 +257,7 @@ export function Sidebar({
               <button 
                 onClick={() => {
                   setShowUserMenu(false);
+                  clearTenant();
                   void signOut({ redirectUrl: '/login' });
                 }}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors"

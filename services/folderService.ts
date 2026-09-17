@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/services/config';
+import { getApiBaseUrl } from '@/services/config';
 import { Folder, FolderNode } from '@/components/dam/types';
 
 interface FetchOptions extends RequestInit {
@@ -17,7 +17,7 @@ async function foldersFetch<T>(path: string, token: string, opts: FetchOptions):
     reqHeaders['X-Tenant-Id'] = tenantId;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...rest,
     headers: reqHeaders,
   });

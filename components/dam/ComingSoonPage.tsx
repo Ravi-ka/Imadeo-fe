@@ -19,7 +19,6 @@ export function ComingSoonPage({ title, breadcrumbs, description }: ComingSoonPa
         breadcrumbs={breadcrumbs}
         searchQuery=""
         onSearchChange={() => {}}
-        onOpenUpload={() => {}}
         totalAssetsCount={0}
         isViewer={false}
       />

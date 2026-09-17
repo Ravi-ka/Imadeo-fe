@@ -235,7 +235,6 @@ function FavoritesPageContent() {
         breadcrumbs={['Home', 'Favorites']}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onOpenUpload={() => {}}
         totalAssetsCount={filteredAssets.length}
         isViewer={false}
       />
