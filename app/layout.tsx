@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
-import { useUIStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 import { ReactQueryProvider } from '@/services/queryClient';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';

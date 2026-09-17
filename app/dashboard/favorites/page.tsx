@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { Suspense, useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/dam/Header';
 import { AssetGrid } from '@/components/dam/AssetGrid';
@@ -13,10 +13,20 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTenantStore } from '@/store/useTenantStore';
 import { toast } from 'sonner';
+import { PageSpinner } from '@/components/ui/PageSpinner';
+import { QueryErrorState } from '@/components/ui/QueryErrorState';
 
 const EMPTY_ASSETS: Asset[] = [];
 
 export default function FavoritesPage() {
+  return (
+    <Suspense fallback={<PageSpinner label="Loading favorites..." />}>
+      <FavoritesPageContent />
+    </Suspense>
+  );
+}
+
+function FavoritesPageContent() {
   const searchParams = useSearchParams();
   const { imadeoId } = useTenantStore();
   const activeTenantId = searchParams.get('ws') || imadeoId || '';
@@ -40,6 +50,8 @@ export default function FavoritesPage() {
   const { 
     data: assetsData, 
     isLoading: isLoadingAssets,
+    isError: isAssetsError,
+    refetch: refetchAssets,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
@@ -235,7 +247,13 @@ export default function FavoritesPage() {
           <p className="text-slate-500">Quickly access your most important and frequently used assets.</p>
         </div>
 
-        {isLoadingAssets ? (
+        {isAssetsError ? (
+          <QueryErrorState
+            title="Could not load favorites"
+            message="There was a problem fetching your favorite assets."
+            onRetry={() => { void refetchAssets(); }}
+          />
+        ) : isLoadingAssets ? (
           <div className="flex items-center space-x-2 text-sm text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading favorites...</span></div>
         ) : fetchedAssets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -268,7 +286,8 @@ export default function FavoritesPage() {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             searchQuery={searchQuery}
-            onShareAsset={() => {}} // mock
+            onShareAsset={() => {}}
+            shareDisabled
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
@@ -282,11 +301,12 @@ export default function FavoritesPage() {
           setSelectedAsset(null);
         }}
         onToggleFavorite={(id) => handleToggleFavorite(id)}
-        onDeleteAsset={async () => {}} // mock
-        onShare={() => {}} // mock
-        onRenameAsset={async () => {}} // mock
-        onDownloadAsset={async () => {}} // mock
+        onDeleteAsset={async () => {}}
+        onShare={() => {}}
+        onRenameAsset={async () => {}}
+        onDownloadAsset={async () => {}}
         isViewer={false}
+        comingSoonActions={['share', 'delete', 'rename', 'download']}
       />
     </>
   );

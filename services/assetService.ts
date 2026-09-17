@@ -1,5 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.imadeo.in';
-
+import { API_BASE_URL } from '@/services/config';
 import { Asset, ApiAsset, AssetType } from '@/components/dam/types';
 
 const localPreviewByAssetId = new Map<string, string>();
@@ -76,10 +75,10 @@ export async function assetsFetch<T>(path: string, token: string, opts: FetchOpt
   };
 
   if (tenantId) {
-    reqHeaders["x-tenant-id"] = tenantId;
+    reqHeaders["X-Tenant-Id"] = tenantId;
   }
 
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     headers: reqHeaders,
   });

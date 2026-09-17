@@ -117,7 +117,6 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess, activeTenantId }
         handleClose();
       }, 500);
     } catch (e: any) {
-      console.error("Upload failed", e);
       setErrorMsg(e.message || "Failed to upload asset");
       setIsUploading(false);
       setProgress(0);

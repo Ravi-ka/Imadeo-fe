@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
-import { useUIStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 import { motion } from 'framer-motion';
 
 export function ThemeToggle() {

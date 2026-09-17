@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
+import { getApiToken } from '@/services/authToken';
 import {
   getFolderTreeApi,
   getFolderChildrenApi,
@@ -15,45 +16,42 @@ const EMPTY_FOLDERS: Folder[] = [];
 
 /** Full workspace folder tree for sidebar / breadcrumbs. */
 export const useFolderTree = (tenantId: string) => {
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   return useQuery({
     queryKey: ['folders', tenantId, 'tree'],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return getFolderTreeApi(token, tenantId);
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId && !!isSignedIn,
     placeholderData: EMPTY_TREE,
   });
 };
 
 /** Direct children of a folder (or skip when at root — use tree roots instead). */
 export const useFolderChildren = (tenantId: string, parentId: string | null) => {
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   return useQuery({
     queryKey: ['folders', tenantId, 'children', parentId || 'root'],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       if (!parentId) return EMPTY_FOLDERS;
       return getFolderChildrenApi(token, parentId, tenantId);
     },
-    enabled: !!tenantId && !!parentId,
+    enabled: !!tenantId && !!parentId && !!isSignedIn,
     placeholderData: EMPTY_FOLDERS,
   });
 };
 
 export const useFolder = (tenantId: string, id: string | null) => {
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   return useQuery({
     queryKey: ['folder', tenantId, id],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return getFolderApi(token, id!, tenantId);
     },
-    enabled: !!tenantId && !!id,
+    enabled: !!tenantId && !!id && !!isSignedIn,
   });
 };
 
@@ -68,8 +66,7 @@ export const useCreateFolder = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async ({ name, parentId }: { name: string; parentId?: string | null }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return createFolderApi(token, name, parentId, tenantId);
     },
     onSuccess: () => {
@@ -90,8 +87,7 @@ export const useUpdateFolder = (tenantId: string) => {
       id: string;
       data: { name?: string; parentId?: string | null };
     }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return updateFolderApi(token, id, data, tenantId);
     },
     onSuccess: () => {
@@ -106,8 +102,7 @@ export const useDeleteFolder = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return deleteFolderApi(token, id, tenantId);
     },
     onSuccess: () => {

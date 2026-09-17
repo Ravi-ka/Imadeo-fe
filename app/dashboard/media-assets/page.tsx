@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/dam/Header';
 import { AssetGrid } from '@/components/dam/AssetGrid';
@@ -49,12 +49,22 @@ import { FolderOpen, Sparkles, Loader2, Database, FileImage } from 'lucide-react
 import { useUploadStore } from '@/store/useUploadStore';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/store/useTenantStore';
+import { PageSpinner } from '@/components/ui/PageSpinner';
+import { QueryErrorState } from '@/components/ui/QueryErrorState';
 
 const EMPTY_WORKSPACES: Workspace[] = [];
 const EMPTY_ASSETS: Asset[] = [];
 const EMPTY_TREE: FolderNode[] = [];
 
 export default function MediaAssetsPage() {
+  return (
+    <Suspense fallback={<PageSpinner label="Loading media assets..." />}>
+      <MediaAssetsPageContent />
+    </Suspense>
+  );
+}
+
+function MediaAssetsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { imadeoId } = useTenantStore();
@@ -87,15 +97,19 @@ export default function MediaAssetsPage() {
     return { ...base, root: true };
   }, [activeTab, debouncedSearch, currentFolderId, isWorkspaceWideList]);
 
-  const { data: workspaces = EMPTY_WORKSPACES } = useWorkspaces();
+  const { data: workspaces = EMPTY_WORKSPACES, isError: isWorkspacesError, refetch: refetchWorkspaces } = useWorkspaces();
   const {
     data: folderTree = EMPTY_TREE,
     isLoading: isLoadingTree,
+    isError: isTreeError,
+    refetch: refetchTree,
   } = useFolderTree(activeTenantId);
 
   const {
     data: assetsData,
     isLoading: isLoadingAssets,
+    isError: isAssetsError,
+    refetch: refetchAssets,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -497,6 +511,18 @@ export default function MediaAssetsPage() {
       />
 
       <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {isAssetsError || isTreeError || isWorkspacesError ? (
+          <QueryErrorState
+            title="Could not load media assets"
+            message="There was a problem fetching your workspace data."
+            onRetry={() => {
+              void refetchAssets();
+              void refetchTree();
+              void refetchWorkspaces();
+            }}
+          />
+        ) : (
+        <>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Breadcrumb
             tree={folderTree}
@@ -658,6 +684,8 @@ export default function MediaAssetsPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <AssetDetailsDrawer

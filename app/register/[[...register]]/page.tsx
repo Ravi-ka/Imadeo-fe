@@ -37,7 +37,7 @@ export default function RegisterPage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/15 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="relative">
-          <LogoLockup className="h-24 w-auto" />
+          <LogoLockup className="h-16 w-auto" />
         </div>
 
         <div className="relative space-y-4 max-w-md">

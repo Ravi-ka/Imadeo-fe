@@ -43,6 +43,7 @@ interface AssetGridProps {
   isEmptyLibrary?: boolean;
   onOpenUpload?: () => void;
   isViewer?: boolean;
+  shareDisabled?: boolean;
 }
 
 export function AssetGrid({
@@ -63,7 +64,8 @@ export function AssetGrid({
   isFetchingNextPage,
   isEmptyLibrary,
   onOpenUpload,
-  isViewer
+  isViewer,
+  shareDisabled
 }: AssetGridProps) {
   const [activeMenuAssetId, setActiveMenuAssetId] = useState<string | null>(null);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
@@ -446,11 +448,15 @@ export function AssetGrid({
                           <Star className={`w-4 h-4 ${asset.isFavorite ? 'fill-amber-400' : ''}`} />
                         </button>
                         <button
+                          type="button"
+                          title={shareDisabled ? 'Coming soon' : 'Share'}
+                          disabled={shareDisabled}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (shareDisabled) return;
                             onShareAsset(asset, e);
                           }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Share2 className="w-4 h-4" />
                         </button>

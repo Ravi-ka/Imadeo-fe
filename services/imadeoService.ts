@@ -1,4 +1,4 @@
-const BASE_URL = 'https://api-dev.imadeo.in';
+import { API_BASE_URL } from '@/services/config';
 
 export interface GetImadeoIdResponse {
   imadeoId?: string | null;
@@ -34,7 +34,7 @@ export async function getImadeoIdApi(token?: string | null): Promise<string | nu
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE_URL}/api/dashboard/get-imadeo-id`, {
+    const response = await fetch(`${API_BASE_URL}/api/dashboard/get-imadeo-id`, {
       method: 'GET',
       headers,
       cache: 'no-store',
@@ -66,8 +66,7 @@ export async function getImadeoIdApi(token?: string | null): Promise<string | nu
     }
 
     return null;
-  } catch (error: any) {
-    console.error('Failed to fetch Imadeo ID from backend DB:', error);
+  } catch (error) {
     throw error;
   }
 }
@@ -86,7 +85,7 @@ export async function createImadeoIdApi(imadeoId: string, token?: string | null)
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE_URL}/api/dashboard/create-imadeo-id`, {
+    const response = await fetch(`${API_BASE_URL}/api/dashboard/create-imadeo-id`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ imadeo_id: imadeoId }),
@@ -114,8 +113,7 @@ export async function createImadeoIdApi(imadeoId: string, token?: string | null)
     }
 
     return data;
-  } catch (error: any) {
-    console.error('Failed to create Imadeo ID in backend DB:', error);
+  } catch (error) {
     throw error;
   }
 }

@@ -18,7 +18,6 @@ import {
   Images
 } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { useAuthStore } from '@/store/useAuthStore';
 import { NavCategory } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaces } from '@/hooks/useAssets';
@@ -45,16 +44,14 @@ export function Sidebar({
   const pathname = usePathname();
 
   const userName = isLoaded && user
-    ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'Alex Morgan')
-    : 'Alex Morgan';
+    ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress.split('@')[0] || 'User')
+    : 'User';
 
   const userEmail = isLoaded && user?.primaryEmailAddress?.emailAddress
     ? user.primaryEmailAddress.emailAddress
-    : 'alex.m@imadeo.io';
+    : '';
 
-  const userAvatar = isLoaded && user?.imageUrl
-    ? user.imageUrl
-    : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+  const userAvatar = isLoaded && user?.imageUrl ? user.imageUrl : '';
 
   const { data: workspacesData } = useWorkspaces();
   const memberships = (workspacesData as any)?.memberships || [];
@@ -202,11 +199,17 @@ export function Sidebar({
         >
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="relative shrink-0">
-              <img
-                src={userAvatar}
-                alt={userName}
-                className="w-9 h-9 rounded-full object-cover border-2 border-primary/40"
-              />
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="w-9 h-9 rounded-full object-cover border-2 border-primary/40"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary border-2 border-primary/40 flex items-center justify-center text-sm font-semibold">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
             </div>
             {!isCollapsed && (
@@ -252,13 +255,7 @@ export function Sidebar({
               <button 
                 onClick={() => {
                   setShowUserMenu(false);
-                  if (typeof window !== 'undefined') {
-                    localStorage.removeItem('imadeo_token');
-                    localStorage.removeItem('imadeo_user');
-                    sessionStorage.clear();
-                  }
-                  useAuthStore.getState().logout();
-                  signOut({ redirectUrl: '/login' });
+                  void signOut({ redirectUrl: '/login' });
                 }}
                 className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors"
               >
