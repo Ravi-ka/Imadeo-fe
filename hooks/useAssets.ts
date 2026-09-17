@@ -1,5 +1,6 @@
 import { InfiniteData, QueryClient, useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
+import { getApiToken } from '@/services/authToken';
 import { getWorkspacesApi } from '@/services/workspaceService';
 import { Asset } from '@/components/dam/types';
 import { 
@@ -109,31 +110,30 @@ const upsertAssetInAssetsCache = (
 
 // Workspaces Hook
 export const useWorkspaces = () => {
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   return useQuery({
     queryKey: ['workspaces'],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return getWorkspacesApi(token);
     },
+    enabled: !!isSignedIn,
   });
 };
 
 // Assets Hooks
 export const useAssets = (tenantId: string, filters?: AssetListFilters, take: number = 20) => {
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   return useInfiniteQuery({
     queryKey: ['assets', tenantId, filters],
     queryFn: async ({ pageParam = undefined }: { pageParam?: string }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       const res = await getAssetsApi(token, tenantId, pageParam, filters, take);
       return res; 
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
     initialPageParam: undefined as string | undefined,
-    enabled: !!tenantId,
+    enabled: !!tenantId && !!isSignedIn,
   });
 };
 
@@ -143,8 +143,7 @@ export const useUploadAsset = (tenantId: string, folderId?: string | null) => {
 
   return useMutation({
     mutationFn: async (file: File) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return uploadAssetDirect(token, file, tenantId, folderId);
     },
     onSuccess: (asset) => {
@@ -154,8 +153,8 @@ export const useUploadAsset = (tenantId: string, folderId?: string | null) => {
       const signal = startThumbnailPollController(asset.id);
       void (async () => {
         try {
-          const token = await getToken();
-          if (!token || signal.aborted) return;
+          const token = await getApiToken(getToken);
+          if (signal.aborted) return;
           const readyAsset = await pollAssetUntilThumbnails(token, asset.id, tenantId, signal);
           if (signal.aborted) return;
           if (readyAsset && (hasRemoteAssetUrl(readyAsset.thumbnailUrl) || hasRemoteAssetUrl(readyAsset.previewUrl))) {
@@ -193,8 +192,7 @@ export const useDeleteAsset = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async (assetId: string) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return deleteAssetApi(token, assetId, tenantId);
     },
     onSuccess: (_data, assetId) => {
@@ -212,8 +210,7 @@ export const useRenameAsset = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async ({ assetId, name }: { assetId: string, name: string }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return renameAssetApi(token, assetId, name, tenantId);
     },
     onSuccess: () => {
@@ -228,8 +225,7 @@ export const useMoveAsset = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async ({ assetId, folderId }: { assetId: string; folderId: string | null }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return moveAssetApi(token, assetId, folderId, tenantId);
     },
     onSuccess: () => {
@@ -244,8 +240,7 @@ export const useAssetDownloadUrl = () => {
 
   return useMutation({
     mutationFn: async ({ assetId, tenantId }: { assetId: string, tenantId: string }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return getAssetDownloadUrlApi(token, assetId, tenantId);
     }
   });
@@ -257,8 +252,7 @@ export const useToggleFavourite = (tenantId: string) => {
 
   return useMutation({
     mutationFn: async ({ assetId, isCurrentlyFavourite }: { assetId: string, isCurrentlyFavourite: boolean }) => {
-      const token = await getToken();
-      if (!token) throw new Error('No token');
+      const token = await getApiToken(getToken);
       return toggleAssetFavouriteApi(token, assetId, tenantId, isCurrentlyFavourite);
     },
     onSuccess: () => {

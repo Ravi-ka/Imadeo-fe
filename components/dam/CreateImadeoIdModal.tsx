@@ -10,9 +10,10 @@ interface CreateImadeoIdModalProps {
   isOpen: boolean;
   onSubmit: (imadeoId: string) => Promise<void>;
   initialError?: string | null;
+  onCancel?: () => void;
 }
 
-export function CreateImadeoIdModal({ isOpen, onSubmit, initialError }: CreateImadeoIdModalProps) {
+export function CreateImadeoIdModal({ isOpen, onSubmit, initialError, onCancel }: CreateImadeoIdModalProps) {
   const [imadeoId, setImadeoId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialError || null);
@@ -23,17 +24,16 @@ export function CreateImadeoIdModal({ isOpen, onSubmit, initialError }: CreateIm
     }
   }, [initialError]);
 
-  // Prevent closing on Escape keypress
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isOpen && e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      if (!isOpen || e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel?.();
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen]);
+  }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
@@ -191,6 +191,18 @@ export function CreateImadeoIdModal({ isOpen, onSubmit, initialError }: CreateIm
             >
               {isSubmitting ? 'Creating Imadeo ID...' : 'Confirm & Proceed to Dashboard'}
             </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="ghost"
+                fullWidth
+                disabled={isSubmitting}
+                onClick={onCancel}
+                className="text-slate-500"
+              >
+                Back to retry
+              </Button>
+            )}
           </form>
 
         </motion.div>

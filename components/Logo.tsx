@@ -43,8 +43,7 @@ export function Logo({
         <span
           className={`font-bold tracking-tight text-slate-900 dark:text-white ${wordmarkSizes[size]} ${wordmarkClassName}`}
         >
-          <span style={{ fontFamily: "'Russo One', sans-serif" }}>Imadeo.in</span>
-     
+          Imadeo
         </span>
       )}
     </span>

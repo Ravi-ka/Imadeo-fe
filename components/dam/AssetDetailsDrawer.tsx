@@ -37,6 +37,7 @@ interface AssetDetailsDrawerProps {
   onDownloadAsset?: (assetId: string) => void;
   onMoveAsset?: (assetId: string) => void;
   isViewer?: boolean;
+  comingSoonActions?: Array<'share' | 'delete' | 'rename' | 'download'>;
 }
 
 export function AssetDetailsDrawer({
@@ -48,7 +49,8 @@ export function AssetDetailsDrawer({
   onRenameAsset,
   onDownloadAsset,
   onMoveAsset,
-  isViewer = false
+  isViewer = false,
+  comingSoonActions = []
 }: AssetDetailsDrawerProps) {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -259,16 +261,28 @@ export function AssetDetailsDrawer({
           {/* Quick Action Toolbar */}
           <div className={`grid gap-2 ${!isViewer && onMoveAsset ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <button
-              onClick={() => onShare(title)}
-              className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+              type="button"
+              title={comingSoonActions.includes('share') ? 'Coming soon' : 'Share'}
+              disabled={comingSoonActions.includes('share')}
+              onClick={() => {
+                if (comingSoonActions.includes('share')) return;
+                onShare(title);
+              }}
+              className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Share2 className="w-4 h-4 text-primary mb-1" />
               <span className="text-[11px] font-semibold">Share</span>
             </button>
 
             <button
-              onClick={() => onDownloadAsset ? onDownloadAsset(selectedAsset.id) : onShare(`Download of ${title} initiated`)}
-              className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+              type="button"
+              title={comingSoonActions.includes('download') ? 'Coming soon' : 'Download'}
+              disabled={comingSoonActions.includes('download')}
+              onClick={() => {
+                if (comingSoonActions.includes('download')) return;
+                onDownloadAsset ? onDownloadAsset(selectedAsset.id) : onShare(`Download of ${title} initiated`);
+              }}
+              className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4 text-emerald-500 mb-1" />
               <span className="text-[11px] font-semibold">Download</span>
@@ -300,8 +314,14 @@ export function AssetDetailsDrawer({
 
             {selectedAsset && !isViewer && (
               <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
+                type="button"
+                title={comingSoonActions.includes('delete') ? 'Coming soon' : 'Delete'}
+                disabled={comingSoonActions.includes('delete')}
+                onClick={() => {
+                  if (comingSoonActions.includes('delete')) return;
+                  setShowDeleteConfirm(true);
+                }}
+                className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4 mb-1" />
                 <span className="text-[11px] font-semibold">Delete</span>
@@ -312,7 +332,7 @@ export function AssetDetailsDrawer({
           {/* Asset Title & Location Path */}
           <div className="space-y-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
             <div className="flex items-start justify-between">
-              {isEditingDescription && !isViewer ? (
+              {isEditingDescription && !isViewer && !comingSoonActions.includes('rename') ? (
                 <input
                   type="text"
                   value={title}
@@ -486,7 +506,7 @@ export function AssetDetailsDrawer({
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Asset?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Are you sure you want to delete "<b>{title}</b>"? <br /><br />The asset will be permanently deleted and cannot be restored.
+                Are you sure you want to delete &quot;<b>{title}</b>&quot;? <br /><br />The asset will be permanently deleted and cannot be restored.
               </p>
               <div className="flex justify-center space-x-3 w-full pt-2">
                 <button

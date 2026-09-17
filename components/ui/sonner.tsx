@@ -1,7 +1,7 @@
 'use client';
 
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
-import { useUIStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const theme = useUIStore((state) => state.theme);

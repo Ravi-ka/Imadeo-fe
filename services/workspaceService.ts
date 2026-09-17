@@ -1,5 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.imadeo.in';
-
+import { getApiBaseUrl } from '@/services/config';
 import { Workspace } from '@/components/dam/types';
 
 interface FetchOptions extends RequestInit {
@@ -17,7 +16,7 @@ async function workspaceFetch<T>(path: string, token: string, opts: FetchOptions
     headers["X-Tenant-Id"] = opts.tenantId;
   }
 
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...opts,
     headers,
   });

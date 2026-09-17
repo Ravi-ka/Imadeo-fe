@@ -1,5 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api-dev.imadeo.in';
-
+import { getApiBaseUrl } from '@/services/config';
 import { Folder, FolderNode } from '@/components/dam/types';
 
 interface FetchOptions extends RequestInit {
@@ -18,7 +17,7 @@ async function foldersFetch<T>(path: string, token: string, opts: FetchOptions):
     reqHeaders['X-Tenant-Id'] = tenantId;
   }
 
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...rest,
     headers: reqHeaders,
   });

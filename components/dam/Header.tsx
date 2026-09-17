@@ -23,7 +23,7 @@ interface HeaderProps {
   breadcrumbs: string[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onOpenUpload: () => void;
+  onOpenUpload?: () => void;
   onOpenCreateFolder?: () => void;
   canCreateFolder?: boolean;
   selectedCount?: number;
@@ -218,7 +218,7 @@ export function Header({
               </Button>
             )}
             {/* Conditional Upload Button */}
-            {!isViewer && (
+            {!isViewer && onOpenUpload && (
               <div className="relative" ref={dropdownRef}>
                 <div className="flex items-stretch h-9 sm:h-10">
                   <button

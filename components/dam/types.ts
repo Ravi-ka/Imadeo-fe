@@ -63,11 +63,8 @@ export interface Asset {
   sizeBytes: number;
   dimensions?: string;
   duration?: string;
-  thumbnailUrl?: string;
+  thumbnailUrl: string;
   previewUrl?: string;
-  status?: AssetStatus;
-  isProcessingPreview?: boolean;
-  localPreviewUrl?: string;
   updatedAt: string;
   createdAt: string;
   owner: {
